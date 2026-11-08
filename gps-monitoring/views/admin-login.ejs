@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Kirish</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center; }
+    .card { background: #1e293b; padding: 2rem; border-radius: 12px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    h1 { font-size: 1.25rem; margin-top: 0; }
+    label { display: block; margin: .75rem 0 .25rem; font-size: .85rem; }
+    input { width: 100%; padding: .6rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
+    button { width: 100%; margin-top: 1.25rem; padding: .7rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
+    .error { color: #f87171; font-size: .85rem; margin-top: .75rem; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/admin/login">
+    <h1>GPS Monitoring — Admin</h1>
+    <label for="username">Foydalanuvchi nomi</label>
+    <input id="username" name="username" autocomplete="username" required>
+    <label for="password">Parol</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <button type="submit">Kirish</button>
+  </form>
+</body>
+</html>
