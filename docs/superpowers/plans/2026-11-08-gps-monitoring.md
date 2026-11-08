@@ -17,6 +17,7 @@
 - No microphone or audio capture of any kind, anywhere in this app.
 - No native mobile app; browser-only (`navigator.geolocation`).
 - SMS sending is stubbed to the console/log in this phase (`sendSms(phone, message)` is the single swap-in point for a real provider later).
+- The employee's phone does not need a constant internet connection: readings are queued client-side (browser local storage) and flushed to the server as a batch, in timestamp order, whenever a connection is available.
 - Employees have no login/account and no admin-side views; their only surface is `/consent/:token`.
 - Admin is a single seeded account (session-based login), not self-signup.
 
@@ -336,7 +337,7 @@ git commit -m "gps-monitoring: add anomaly-detection pure functions"
 
 **Interfaces:**
 - Consumes: `createDb` (Task 1); `haversineDistanceMeters`, `isOutsideZone`, `isOutsideWorkHours`, `detectLongStop`, `detectSignalLoss` (Task 3).
-- Produces: `runAnomalyChecks(db, employeeId: number, newLocation: {lat: number, lng: number, recorded_at: string}, previousLocation: {recorded_at: string} | null) -> string[]` — returns the `type`s of every alert it inserted (subset of `['zone_violation', 'outside_hours', 'long_stop', 'signal_loss']`), in that order. Assumes `newLocation` has **already** been inserted into `locations` by the caller before this is called.
+- Produces: `runAnomalyChecks(db, employeeId: number, newLocation: {lat: number, lng: number, recorded_at: string}) -> string[]` — returns the `type`s of every alert it inserted (subset of `['zone_violation', 'outside_hours', 'long_stop', 'signal_loss']`), in that order. Assumes `newLocation` has **already** been inserted into `locations` by the caller before this is called. Internally looks up the previous location itself (`WHERE employee_id = ? AND recorded_at < ? ORDER BY recorded_at DESC LIMIT 1`), so it gives correct results whether `newLocation` is a single live ping or one point from a batch of offline-queued points being replayed in order — the caller never has to track "the previous point" itself.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -365,7 +366,7 @@ test('runAnomalyChecks: flags a point outside the zone', () => {
     'INSERT INTO locations (employee_id, lat, lng, recorded_at) VALUES (?, ?, ?, ?)'
   ).run(employeeId, newLocation.lat, newLocation.lng, newLocation.recorded_at);
 
-  const types = runAnomalyChecks(db, employeeId, newLocation, null);
+  const types = runAnomalyChecks(db, employeeId, newLocation);
 
   assert.ok(types.includes('zone_violation'));
   const row = db.prepare('SELECT * FROM alerts WHERE employee_id = ? AND type = ?')
@@ -382,9 +383,27 @@ test('runAnomalyChecks: no alerts for a normal in-zone, in-hours, first-ever pin
     'INSERT INTO locations (employee_id, lat, lng, recorded_at) VALUES (?, ?, ?, ?)'
   ).run(employeeId, newLocation.lat, newLocation.lng, newLocation.recorded_at);
 
-  const types = runAnomalyChecks(db, employeeId, newLocation, null);
+  const types = runAnomalyChecks(db, employeeId, newLocation);
 
   assert.deepStrictEqual(types, []);
+});
+
+test('runAnomalyChecks: flags signal_loss when the gap since the previous DB row exceeds the threshold', () => {
+  const db = createDb(':memory:');
+  const employeeId = seedEmployeeWithZone(db);
+  const earlier = new Date(Date.now() - 20 * 60 * 1000).toISOString(); // 20 min ago
+  db.prepare(
+    'INSERT INTO locations (employee_id, lat, lng, recorded_at) VALUES (?, ?, ?, ?)'
+  ).run(employeeId, 41.3, 69.2, earlier);
+
+  const newLocation = { lat: 41.3, lng: 69.2, recorded_at: new Date().toISOString() };
+  db.prepare(
+    'INSERT INTO locations (employee_id, lat, lng, recorded_at) VALUES (?, ?, ?, ?)'
+  ).run(employeeId, newLocation.lat, newLocation.lng, newLocation.recorded_at);
+
+  const types = runAnomalyChecks(db, employeeId, newLocation);
+
+  assert.ok(types.includes('signal_loss'));
 });
 ```
 
@@ -399,9 +418,11 @@ Expected: FAIL — `Cannot find module '../src/anomalyRunner'`
 2. `const alertTypes = [];` and a local `insertAlert(type, details)` helper that runs `INSERT INTO alerts (employee_id, type, details, created_at, resolved) VALUES (?, ?, ?, ?, 0)` with `created_at = new Date().toISOString()`, then pushes `type` onto `alertTypes`.
 3. If `zone`: call `isOutsideZone(newLocation.lat, newLocation.lng, zone)`; if true, `insertAlert('zone_violation', ...)`.
 4. If `zone`: call `isOutsideWorkHours(new Date(newLocation.recorded_at), zone)`; if true, `insertAlert('outside_hours', ...)`.
-5. Fetch recent points for the long-stop check: `db.prepare("SELECT lat, lng, recorded_at FROM locations WHERE employee_id = ? AND recorded_at >= ? ORDER BY recorded_at ASC").all(employeeId, <30 minutes before newLocation.recorded_at as ISO string>)`. Call `detectLongStop(recentPoints)`; if true, `insertAlert('long_stop', ...)`.
-6. If `previousLocation` is not `null`: call `detectSignalLoss(previousLocation.recorded_at, new Date(newLocation.recorded_at))`; if true, `insertAlert('signal_loss', ...)`.
+5. Fetch recent points for the long-stop check: `db.prepare("SELECT lat, lng, recorded_at FROM locations WHERE employee_id = ? AND recorded_at >= ? AND recorded_at <= ? ORDER BY recorded_at ASC").all(employeeId, <30 minutes before newLocation.recorded_at>, newLocation.recorded_at)`. Call `detectLongStop(recentPoints)`; if true, `insertAlert('long_stop', ...)`.
+6. `const previous = db.prepare('SELECT recorded_at FROM locations WHERE employee_id = ? AND recorded_at < ? ORDER BY recorded_at DESC LIMIT 1').get(employeeId, newLocation.recorded_at);` — if `previous` is found: call `detectSignalLoss(previous.recorded_at, new Date(newLocation.recorded_at))`; if true, `insertAlert('signal_loss', ...)`.
 7. Return `alertTypes`.
+
+Note: bounding the long-stop query with `recorded_at <= newLocation.recorded_at` (not just `ORDER BY ... ASC` over everything `>=` the 30-minute floor) keeps a batch replay of older, offline-queued points from picking up rows that are later in wall-clock insertion order but later in time than the point currently being checked.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -566,8 +587,14 @@ git commit -m "gps-monitoring: add Express app factory, session, health check"
 - Produces: `employeeRoutes(db) -> express.Router()` exposing:
   - `GET /consent/:token` — 404 if no `consents` row matches `token`; else renders `consent-pending.ejs` (status `pending`) or `consent-tracking.ejs` (status `consented`).
   - `POST /consent/:token` — 404 if no match; if `pending`, sets `status = 'consented'`, `consented_at = now ISO`, then redirects to `GET /consent/:token`.
-  - `POST /consent/:token/location` — 404 if no match; 403 if not `consented`; else validates `req.body.lat`/`req.body.lng` are finite numbers (400 if not), inserts into `locations` with `recorded_at = now ISO`, fetches the prior last location (before this insert) for signal-loss comparison, calls `runAnomalyChecks`, responds `204`.
-- `consent-tracking.ejs` must render the literal text `GPS kuzatuv FAOL` and include a `<script>` that calls `navigator.geolocation.watchPosition` (or a `setInterval` + `getCurrentPosition`) every 30 seconds, POSTing `{ lat, lng }` as JSON to `./location` (relative to the current `/consent/:token` URL).
+  - `POST /consent/:token/locations` — accepts a **batch**: body `{ points: [{ lat: number, lng: number, recorded_at: string }, ...] }`. 404 if no match; 403 if not `consented`; 400 if `points` is missing/empty/not an array, or any point has a non-finite `lat`/`lng` or a `recorded_at` that doesn't parse as a date. Otherwise: sort `points` ascending by `recorded_at`, and for each, in order: insert into `locations`, then call `runAnomalyChecks(db, employeeId, thatPoint)`. Respond `204` once all points are processed.
+- `consent-tracking.ejs` must render the literal text `GPS kuzatuv FAOL` and include a `<script>` implementing the client-side offline queue described below.
+
+**Client-side offline queue (in `consent-tracking.ejs`):**
+- Every 30 seconds, call `navigator.geolocation.getCurrentPosition`; on success, append `{ lat, lng, recorded_at: new Date().toISOString() }` to an array kept in `localStorage` under a key unique to this token (e.g. `` `gps_queue_${token}` ``), then attempt a flush.
+- `flush()`: read the queued array; if empty, return. Otherwise `fetch('./locations', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ points: queue }) })`. On a response with `ok === true`, clear the queue from `localStorage`. On a network error or a non-OK response, leave the queue untouched (it is retried on the next 30-second tick or the next `online` event) — a reading is never recorded locally and then thrown away before the server has accepted it.
+- Also call `flush()` immediately on `window.addEventListener('online', ...)`, so a reconnect doesn't wait for the next 30-second tick.
+- This runs with no network required to keep collecting readings — only sending them needs connectivity.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -622,22 +649,41 @@ test('POST /consent/:token records consent, then GET shows tracking screen', asy
   assert.match(getRes.text, /GPS kuzatuv FAOL/);
 });
 
-test('POST /consent/:token/location is rejected before consent', async () => {
+test('POST /consent/:token/locations is rejected before consent', async () => {
   const { app } = buildAppWithPendingEmployee();
-  const res = await request(app).post('/consent/tok-123/location').send({ lat: 41.3, lng: 69.2 });
+  const res = await request(app)
+    .post('/consent/tok-123/locations')
+    .send({ points: [{ lat: 41.3, lng: 69.2, recorded_at: new Date().toISOString() }] });
   assert.strictEqual(res.status, 403);
 });
 
-test('POST /consent/:token/location is accepted after consent and stores it', async () => {
+test('POST /consent/:token/locations rejects an empty or missing points array', async () => {
+  const { app } = buildAppWithPendingEmployee();
+  await request(app).post('/consent/tok-123');
+
+  const res = await request(app).post('/consent/tok-123/locations').send({ points: [] });
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /consent/:token/locations accepts a batch after consent, stores all points, oldest first', async () => {
   const { app, db, employeeId } = buildAppWithPendingEmployee();
   await request(app).post('/consent/tok-123');
 
-  const res = await request(app).post('/consent/tok-123/location').send({ lat: 41.3, lng: 69.2 });
+  const older = new Date(Date.now() - 60 * 1000).toISOString();
+  const newer = new Date().toISOString();
+  // sent out of order on purpose — the server must sort by recorded_at itself
+  const res = await request(app)
+    .post('/consent/tok-123/locations')
+    .send({ points: [
+      { lat: 41.31, lng: 69.21, recorded_at: newer },
+      { lat: 41.3, lng: 69.2, recorded_at: older },
+    ] });
   assert.strictEqual(res.status, 204);
 
-  const row = db.prepare('SELECT * FROM locations WHERE employee_id = ?').get(employeeId);
-  assert.strictEqual(row.lat, 41.3);
-  assert.strictEqual(row.lng, 69.2);
+  const rows = db.prepare('SELECT * FROM locations WHERE employee_id = ? ORDER BY recorded_at ASC').all(employeeId);
+  assert.strictEqual(rows.length, 2);
+  assert.strictEqual(rows[0].recorded_at, older);
+  assert.strictEqual(rows[1].recorded_at, newer);
 });
 ```
 
@@ -648,11 +694,11 @@ Expected: FAIL — `Cannot find module '../src/routes/employeeRoutes'` (or 404s 
 
 - [ ] **Step 3: Implement `employeeRoutes(db)`, the two views, and mount it in `app.js`**
 
-Route logic per the Interfaces block above. For the location POST, query the previous last location (`ORDER BY recorded_at DESC LIMIT 1`) **before** inserting the new row, so Task 4's `previousLocation` argument is correct.
+Route logic per the Interfaces block above. Validate and sort `points` before the insert loop; call `runAnomalyChecks(db, employeeId, point)` once per point, immediately after that point's own insert (so each call sees its own row already in the table, matching Task 4's assumption).
 
 `consent-pending.ejs`: plain explanation of why tracking is requested (corruption-control GPS monitoring) and a form `POST` to the current URL with a "Roziman" submit button.
 
-`consent-tracking.ejs`: the `GPS kuzatuv FAOL` banner plus the geolocation-reporting script described in the Interfaces block.
+`consent-tracking.ejs`: the `GPS kuzatuv FAOL` banner plus the offline-queue script described in the Interfaces block above.
 
 - [ ] **Step 4: Run tests to verify they pass**
 

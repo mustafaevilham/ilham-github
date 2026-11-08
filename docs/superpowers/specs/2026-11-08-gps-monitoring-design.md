@@ -47,15 +47,38 @@ work hours, unexplained long stops, lost signal) for the admin to review.
    this click.
 4. On consent, the server timestamps it (`consented_at`) and the same
    page switches into tracking mode: shows the "GPS kuzatuv FAOL" banner
-   and begins sending the browser's geolocation to the server every 30
-   seconds via `navigator.geolocation.watchPosition` / periodic fetch,
-   for as long as the page stays open.
+   and begins reading the browser's geolocation every 30 seconds via
+   `navigator.geolocation.getCurrentPosition`, for as long as the page
+   stays open — no app installation, nothing beyond the browser tab.
 5. If the employee revisits the link after consenting, they go straight
    to the tracking page (consent is remembered server-side by token).
 6. If an employee has not yet consented, admin sees status "kutilmoqda"
    (pending) for them, and location data is neither requested nor
-   accepted for that employee (server rejects location POSTs for an
-   employee without a stored consent).
+   accepted for that employee (server rejects location submissions for
+   an employee without a stored consent).
+
+## Offline Handling
+
+The employee's phone does not need a constant internet connection.
+Each GPS reading is first stored in the browser's local storage
+(client-side queue), independent of connectivity. The page then tries
+to send the queued readings to the server as a batch:
+- On every reading, and
+- Immediately when the browser reports it is back online
+  (`window.addEventListener('online', ...)`).
+
+A send only clears an item from the local queue once the server has
+accepted it (HTTP success). If sending fails (no connection), the
+readings stay queued and are retried on the next attempt — nothing is
+collected only to be silently dropped. This means a reading taken while
+offline is still recorded locally and reaches the server, with its true
+original timestamp, as soon as connectivity returns; the server
+processes a batch of points in timestamp order so zone/work-hours/
+long-stop/signal-loss checks apply to each point as if it had arrived
+individually. The local queue lives only in that browser tab/profile —
+if the employee clears site data before reconnecting, those unsent
+readings are lost (acceptable for the MVP; a durable server-side queue
+is future work, not in scope here).
 
 ## Anomaly Detection (MVP rules)
 
