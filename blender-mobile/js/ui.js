@@ -32,7 +32,9 @@ $('bCam').onclick=function(){
   var tgt=MB.sel?MB.sel.getWorldPosition(new THREE.Vector3()):new THREE.Vector3(0,0.5,0);
   orbit.target.copy(tgt); MB.camera.position.set(tgt.x+MB.HOME[0],tgt.y+MB.HOME[1],tgt.z+MB.HOME[2]);
 };
-$('bDemo').onclick=function(){ MB.buildDemo(); MB.toast('Namuna multfilm yuklandi. Play bosing'); };
+$('bDemo').onclick=function(){ MB.buildPizza(); MB.toast('Namuna yuklandi. Play bosing'); };
+$('bDemoA').onclick=function(){ MB.buildPizza(); MB.toast('Pitsa kuryeri yuklandi'); };
+$('bDemoB').onclick=function(){ MB.buildDemo(); MB.toast('Sakrovchi shar yuklandi'); };
 $('bSave').onclick=MB.saveLocal; $('bLoad').onclick=MB.loadLocal;
 
 /* ---------- transform modes ---------- */

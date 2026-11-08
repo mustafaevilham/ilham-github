@@ -13,7 +13,7 @@ MB.anim={dur:60,time:0,playing:false,loop:false,fps:24,ease:'lin',audio:null};
 MB.camKeys=[];
 MB.world={bg:0x23262e,hemi:0.8,sun:0.9,fog:0,shadows:true,grid:true,floor:true};
 MB.frameHooks=[];
-MB.LABEL={cube:'Kub',sphere:'Shar',cylinder:'Silindr',cone:'Konus',torus:'Torus',plane:'Tekislik',
+MB.LABEL={group:'Guruh',cube:'Kub',sphere:'Shar',cylinder:'Silindr',cone:'Konus',torus:'Torus',plane:'Tekislik',
   point:'Nuqta nuri',spot:'Spot nur',sun:'Quyosh nuri',bone:'Suyak',emitter:'Zarra'};
 
 /* ---------- renderer / scene ---------- */
@@ -145,6 +145,7 @@ MB.createMesh=function(type,geoData){
   var m=new THREE.MeshStandardMaterial({side:type==='plane'?THREE.DoubleSide:THREE.FrontSide});
   var o=new THREE.Mesh(g,m); o.castShadow=true; o.receiveShadow=true; return o;
 };
+MB.createGroup=function(){ return new THREE.Group(); };
 MB.createLight=function(type){
   var proxy=new THREE.Mesh(new THREE.SphereGeometry(0.16,12,8),new THREE.MeshBasicMaterial({color:0xffee88}));
   var L;
@@ -174,7 +175,7 @@ MB.pickables=function(){
   var out=[]; MB.nodes.forEach(function(o){
     if(!visibleDeep(o)) return;
     if(o.userData.kind==='bone'){ if(o.userData.vis) out.push(o.userData.vis); }
-    else out.push(o);
+    else if(o.userData.kind!=='group') out.push(o);
   }); return out;
 };
 MB.byId=function(id){ for(var i=0;i<MB.nodes.length;i++) if(MB.nodes[i].userData.id===id) return MB.nodes[i]; return null; };
@@ -193,6 +194,7 @@ MB.addNode=function(kind,type,opts){
   if(kind==='mesh') o=MB.createMesh(type);
   else if(kind==='light') o=MB.createLight(type);
   else if(kind==='bone') o=MB.createBone();
+  else if(kind==='group') o=MB.createGroup();
   else if(kind==='emitter') o=MB.createEmitter(opts.em);
   var u=o.userData; u.id=nextId++; u.kind=kind; u.type=type; u.name=opts.name||(MB.label(type)+' '+u.id);
   u.kf=[]; u.ph={m:'none',mass:1,rest:0.4,fric:0.4}; u.tx=''; u.tr=1;
@@ -233,6 +235,7 @@ function build(d){
   if(d.k==='mesh') o=MB.createMesh(d.t,d.geo);
   else if(d.k==='light') o=MB.createLight(d.t);
   else if(d.k==='bone') o=MB.createBone();
+  else if(d.k==='group') o=MB.createGroup();
   else if(d.k==='emitter') o=MB.createEmitter(d.em);
   else return null;
   var u=o.userData; u.id=d.id; u.kind=d.k; u.type=d.t; u.name=d.n; u.kf=d.kf||[]; u.ph=d.ph||{m:'none',mass:1,rest:0.4,fric:0.4};
