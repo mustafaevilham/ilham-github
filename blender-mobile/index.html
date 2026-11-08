@@ -4,7 +4,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600&display=swap">
 <style>
-/* Layout: full-screen 3D viewport, top action bar, bottom tool + property dock. Single dark look (3D editors read best dark). */
+/* Layout: full-height editor. Top bar, 3D viewport, timeline, gizmo modes, tabbed dock. Single dark look. */
 :root{
   --bg:#15171c; --panel:#1e2128; --line:#333845; --fg:#e6e8ee; --muted:#8d93a3; --accent:#ea7600; --accent-fg:#1a1100;
   --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
@@ -12,383 +12,213 @@
 }
 html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:13px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
-#app{position:relative;height:100%;display:flex;flex-direction:column;gap:8px;padding-block:8px}
-#view{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#23262e;border:1px solid var(--line)}
+#app{position:relative;height:100%;display:flex;flex-direction:column;gap:6px;padding-block:6px}
+#view{position:relative;flex:1;min-height:120px;border-radius:12px;overflow:hidden;background:#23262e;border:1px solid var(--line)}
 #view canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.bar{justify-content:space-between}
-button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:44px;min-width:44px;padding:0 12px;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button,select,input[type=number],input[type=text]{font:inherit;color:var(--fg)}
+button{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:40px;min-width:40px;padding:0 10px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button:active{background:#2a2e38}
 button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
 button:disabled{opacity:.4}
 button.danger{color:#ff8a80}
-.seg{display:flex;flex:1;gap:6px}
-.seg button{flex:1}
-#menu{position:absolute;left:8px;top:8px;z-index:5;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+select,input[type=number],input[type=text]{background:#14161b;border:1px solid var(--line);border-radius:8px;min-height:36px;padding:0 8px;min-width:0}
+.bar{flex-wrap:nowrap}.bar button{flex:1 1 0;padding:0 4px;min-width:0;font-size:12px;min-height:38px}
+.modes{flex-wrap:nowrap}.modes button{padding:0 6px;font-size:12px;min-width:0}.modes .seg{flex:3}
+.seg{display:flex;flex:1;gap:6px}.seg button{flex:1;padding:0 4px}
+#menu{position:absolute;left:8px;top:8px;right:8px;z-index:5;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-height:calc(100% - 16px);overflow:auto}
 #menu[hidden]{display:none}
-#props{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
-#props[hidden]{display:none}
-#props label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
-#props input[type=range]{width:88px;accent-color:var(--accent)}
-#props input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px}
-#hint{position:absolute;left:10px;bottom:8px;right:10px;color:var(--muted);font-size:11px;pointer-events:none;text-shadow:0 1px 2px #000}
-#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-fg);padding:6px 12px;border-radius:999px;font-weight:600;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+#menu h4{margin:6px 0 4px;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+#menu .g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#outliner{position:absolute;right:8px;top:8px;z-index:4;width:min(260px,70%);max-height:calc(100% - 16px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+#outliner[hidden]{display:none}
+.orow{display:flex;gap:4px;align-items:center;border-radius:8px}.orow.sel{background:#2d3140}
+.oname{flex:1;text-align:left;border:0;background:none;min-height:34px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oeye{border:0;background:none;min-height:34px;font-size:11px;color:var(--muted);padding:0 6px}
+#hint{position:absolute;left:10px;bottom:6px;right:10px;color:var(--muted);font-size:11px;pointer-events:none;text-shadow:0 1px 2px #000}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-fg);padding:6px 12px;border-radius:999px;font-weight:600;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90%;text-align:center}
 #toast.show{opacity:1}
 #tl{flex-wrap:nowrap}
-#tSlider{flex:1;min-width:0;accent-color:var(--accent);height:44px}
+#tSlider{flex:1;min-width:0;accent-color:var(--accent);height:40px}
 #tLabel{color:var(--muted);font-size:12px;min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+#lane{position:relative;height:22px;background:#14161b;border:1px solid var(--line);border-radius:8px;margin-inline:6px}
+#lane[hidden]{display:none}
+.lane-tag{position:absolute;left:6px;top:3px;font-size:10px;color:var(--muted);pointer-events:none}
+.key{position:absolute;top:5px;width:11px;height:11px;min-width:0;min-height:0;padding:0;margin-left:-5px;border-radius:2px;transform:rotate(45deg);background:var(--accent);border:0}
+#dock{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#tabs{display:flex;overflow-x:auto;gap:2px;padding:4px;border-bottom:1px solid var(--line);scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+#tabs button{flex:0 0 auto;border:0;background:none;min-height:34px;color:var(--muted)}
+#tabs button.on{background:var(--accent);color:var(--accent-fg)}
+#dock.closed .tab{display:none}#dock.closed #tabs{border-bottom:0}
+.tab{padding:8px 10px;max-height:30vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.tab[hidden]{display:none}
+.tab label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.tab input[type=range]{flex:1;min-width:60px;accent-color:var(--accent)}
+.tab input[type=color]{width:44px;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px}
+.tab .r{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tab .r>label{flex:1 1 130px}
+.tab .r>button{flex:1 1 auto}
+.tab .note{color:var(--muted);font-size:11px;line-height:1.4}
+.tab h5{margin:2px 0 0;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.tab input[type=number]{width:70px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
 <div id="app">
   <div class="row bar">
     <button id="bAdd" aria-expanded="false">+ Qo'shish</button>
+    <button id="bList">Ro'yxat</button>
     <button id="bUndo" aria-label="Bekor qilish">Bekor</button>
     <button id="bRedo" aria-label="Qaytarish">Qayta</button>
     <button id="bCam">Kamera</button>
     <button id="bDemo">Namuna</button>
-    <button id="bSave">Saqlash</button>
-    <button id="bLoad">Yuklash</button>
   </div>
   <div id="view">
     <div id="menu" hidden>
-      <button data-add="cube">Kub</button>
-      <button data-add="sphere">Shar</button>
-      <button data-add="cylinder">Silindr</button>
-      <button data-add="cone">Konus</button>
-      <button data-add="torus">Torus</button>
-      <button data-add="plane">Tekislik</button>
+      <h4>Shakllar</h4>
+      <div class="g">
+        <button data-add="mesh:cube">Kub</button><button data-add="mesh:sphere">Shar</button><button data-add="mesh:cylinder">Silindr</button>
+        <button data-add="mesh:cone">Konus</button><button data-add="mesh:torus">Torus</button><button data-add="mesh:plane">Tekislik</button>
+      </div>
+      <h4>Yorug'lik</h4>
+      <div class="g"><button data-add="light:point">Nuqta</button><button data-add="light:spot">Spot</button><button data-add="light:sun">Quyosh</button></div>
+      <h4>Suyak va effekt</h4>
+      <div class="g">
+        <button data-add="bone:bone">Suyak</button><button data-add="emitter:suv">Suv</button><button data-add="emitter:olov">Olov</button>
+        <button data-add="emitter:tutun">Tutun</button><button data-add="emitter:konfeti">Konfeti</button>
+      </div>
     </div>
+    <div id="outliner" hidden></div>
     <div id="toast" role="status"></div>
     <div id="hint">1 barmoq: aylantirish · 2 barmoq: surish va zoom · ob'ektga bosing: tanlash</div>
   </div>
-  <div id="props" hidden>
-    <label>Rang <input type="color" id="pColor" value="#4a90d9"></label>
-    <label>Metall <input type="range" id="pMetal" min="0" max="1" step="0.05"></label>
-    <label>Silliq <input type="range" id="pRough" min="0" max="1" step="0.05"></label>
-    <label><input type="checkbox" id="pWire"> Tor</label>
-  </div>
+
   <div class="row" id="tl">
     <button id="bPlay">Play</button>
     <input type="range" id="tSlider" min="0" max="60" step="0.05" value="0" aria-label="Vaqt">
     <span id="tLabel">0:00 / 1:00</span>
     <button id="bKey">+ Kadr</button>
   </div>
-  <div class="row">
+  <div id="lane" hidden></div>
+  <div class="row modes">
     <div class="seg">
-      <button id="mMove" class="on">Ko'chir</button>
-      <button id="mRot">Aylantir</button>
-      <button id="mScale">O'lcham</button>
+      <button id="mMove" class="on">Ko'chir</button><button id="mRot">Aylantir</button><button id="mScale">O'lcham</button>
     </div>
-    <button id="bSnap">Qadam</button>
-    <button id="bDup">Nusxa</button>
-    <button id="bDel" class="danger">O'chir</button>
+    <button id="bSnap">Qadam</button><button id="bDup">Nusxa</button><button id="bDel" class="danger">O'chir</button>
+  </div>
+
+  <div id="dock" class="closed">
+    <div id="tabs">
+      <button data-t="obj">Ob'ekt</button><button data-t="edit">Tahrir</button><button data-t="mat">Material</button>
+      <button data-t="anim">Animatsiya</button><button data-t="rig">Suyak</button><button data-t="phys">Fizika</button>
+      <button data-t="world">Dunyo</button><button data-t="out">Chiqarish</button>
+    </div>
+
+    <section class="tab" data-tab="obj" hidden>
+      <div id="oBody" hidden>
+        <div class="r"><label>Nomi <input type="text" id="oName" style="flex:1"></label><label><input type="checkbox" id="oVis"> Ko'rinadi</label></div>
+        <div class="r" style="margin-top:8px"><label>Ota-ona <select id="oParent" style="flex:1"></select></label><button id="bParent">Bog'lash</button></div>
+        <p class="note">Bog'langan ob'ekt ota-onasi bilan birga harakatlanadi. "—" tanlab bog'lashni olib tashlang.</p>
+      </div>
+      <p class="note">Ob'ektni tanlang yoki "+ Qo'shish" bosing.</p>
+    </section>
+
+    <section class="tab" data-tab="edit" hidden>
+      <button id="bEdit" disabled>Tahrir rejimiga kirish</button>
+      <p class="note" id="eInfo">Shaklni tanlang, so'ng tahrir rejimiga kiring. Tugunni bosing, gizmo bilan suring.</p>
+      <div id="eOps" hidden>
+        <div class="r"><button id="eAll">Hammasi</button><button id="eNone">Hech biri</button><button id="eInv">Teskari</button></div>
+        <div class="r" style="margin-top:6px"><label>Masofa <input type="number" id="eAmt" value="0.4" step="0.1"></label><button id="eExt">Cho'zish (Extrude)</button></div>
+        <div class="r" style="margin-top:6px"><button id="eSub">Bo'lish</button><button id="eSurf">Silliq sirt</button><button id="eSmooth">Tekislash</button></div>
+        <div class="r" style="margin-top:6px"><button id="eMerge">Birlashtirish</button><button id="eDel">O'chirish</button><button id="eFlip">Yuzni aylantirish</button><button id="eMirror">Ko'zgu (X)</button></div>
+        <div class="r" style="margin-top:6px"><label><input type="checkbox" id="eFlat" checked> Qirrali</label><label><input type="checkbox" id="eProp"> Yumshoq tanlash</label>
+          <label>Radius <input type="range" id="eRad" min="0.3" max="5" step="0.1" value="1.5"></label></div>
+        <p class="note">Yuz = 3 ta tanlangan tugun. Cho'zish tanlangan yuzlarni normal bo'ylab tortadi.</p>
+      </div>
+    </section>
+
+    <section class="tab" data-tab="mat" hidden>
+      <p class="note" id="mNone">Material uchun shakl yoki yorug'likni tanlang.</p>
+      <div id="mBlock" hidden>
+        <div class="r"><label>Rang <input type="color" id="mColor"></label><label>Nur <input type="color" id="mEmis"></label><label>Kuch <input type="range" id="mEmisI" min="0" max="3" step="0.05"></label></div>
+        <div class="r" style="margin-top:6px"><label>Metall <input type="range" id="mMetal" min="0" max="1" step="0.05"></label><label>Silliq <input type="range" id="mRough" min="0" max="1" step="0.05"></label></div>
+        <div class="r" style="margin-top:6px"><label>Shaffof <input type="range" id="mOpac" min="0.05" max="1" step="0.05"></label><label><input type="checkbox" id="mWire"> Tor</label></div>
+        <div class="r" style="margin-top:6px"><label>Tekstura <select id="mTex"></select></label><label>Takror <input type="number" id="mTexRep" value="1" min="1" max="20"></label>
+          <label style="flex:1 1 100%">Rasm yuklash <input type="file" id="mImg" accept="image/*"></label></div>
+      </div>
+      <div id="lBlock" hidden>
+        <div class="r"><label>Rang <input type="color" id="lColor"></label><label>Kuch <input type="range" id="lInt" min="0" max="5" step="0.05"></label></div>
+        <div class="r" style="margin-top:6px"><label>Masofa <input type="range" id="lDist" min="0" max="40" step="0.5"></label>
+          <label id="lAngleRow">Burchak <input type="range" id="lAngle" min="0.1" max="1.4" step="0.02"></label><label><input type="checkbox" id="lShadow"> Soya</label></div>
+      </div>
+    </section>
+
+    <section class="tab" data-tab="anim" hidden>
+      <div class="r"><label>Davomiyligi (s) <input type="number" id="aDur" value="60" min="2" max="600"></label><label><input type="checkbox" id="aLoop"> Takrorlash</label></div>
+      <div class="r"><label>Harakat turi <select id="aEase" style="flex:1"></select></label></div>
+      <div class="r"><button id="bKeyAll">Hammaga kadr</button><button id="bKeyCam">Kamera kadri</button><button id="bKeyDel">Kadrni o'chirish</button><button id="bKeyClear">Hammasini tozalash</button></div>
+      <h5>Ovoz</h5>
+      <div class="r"><label style="flex:1 1 100%"><input type="file" id="aAudio" accept="audio/*"></label><span class="note" id="aAudioName">Ovoz yo'q</span><button id="bAudioClear">Ovozni olib tashlash</button></div>
+      <p class="note">Ob'ektni tanlab vaqtni suring, ob'ektni siljiting va "+ Kadr" bosing. Rang, shaffoflik va nur kuchi ham animatsiya qilinadi. Tanlov bo'lmasa kamera kadrlari ko'rinadi.</p>
+    </section>
+
+    <section class="tab" data-tab="rig" hidden>
+      <div class="r"><button id="rBone">+ Suyak</button><label>Zanjir <input type="number" id="rChainN" value="4" min="2" max="12"></label><button id="rChain">Zanjir qo'shish</button></div>
+      <button id="rBind">Tanlangan shaklni suyaklarga biriktirish</button>
+      <p class="note">1) Suyak qo'shing (suyak tanlangan bo'lsa, uning uchiga ulanadi). 2) Gizmo bilan joylashtiring. 3) Shaklni tanlab biriktiring. 4) Suyakni aylantirib poza bering va "+ Kadr" bosing.</p>
+    </section>
+
+    <section class="tab" data-tab="phys" hidden>
+      <div id="pBody" hidden>
+        <div class="r"><label>Turi <select id="pMode"><option value="none">Yo'q</option><option value="active">Faol (tushadi)</option><option value="passive">Qattiq (zamin)</option></select></label></div>
+        <div class="r"><label>Massa <input type="number" id="pMass" value="1" step="0.5" min="0.1"></label><label>Sakrash <input type="number" id="pRest" value="0.4" step="0.1" min="0" max="1"></label><label>Ishqalanish <input type="number" id="pFric" value="0.4" step="0.1" min="0" max="1"></label></div>
+      </div>
+      <div class="r"><label>Og'irlik kuchi <input type="number" id="pGrav" value="9.82" step="0.5"></label><button id="pBake">Fizikani hisoblash</button><button id="pClear">Tozalash</button></div>
+      <p class="note">Faol ob'ektlar zaminga (Qattiq tekislik yoki kub) tushadi va to'qnashadi. Natija kadrlarga yoziladi. Hisoblashdan oldin ob'ektlarni boshlang'ich joyga qo'ying.</p>
+      <div id="pEm" hidden>
+        <h5>Zarralar</h5>
+        <div class="r"><label>Tur <select id="emPreset"><option value="">—</option><option value="suv">Suv</option><option value="olov">Olov</option><option value="tutun">Tutun</option><option value="konfeti">Konfeti</option></select></label>
+          <label>Soni <input type="number" id="em_n" min="20" max="1500" step="20"></label><label>Umr (s) <input type="number" id="em_life" step="0.2" min="0.2"></label></div>
+        <div class="r"><label>Tezlik <input type="number" id="em_speed" step="0.5"></label><label>Tarqalish <input type="number" id="em_spread" step="0.1"></label><label>Og'irlik <input type="number" id="em_g" step="0.5"></label></div>
+        <div class="r"><label>Kattalik <input type="number" id="em_size" step="0.05"></label><label>Boshlanish (s) <input type="number" id="em_t0" step="0.5"></label>
+          <label>Rang 1 <input type="color" id="em_c0"></label><label>Rang 2 <input type="color" id="em_c1"></label></div>
+        <div class="r"><label><input type="checkbox" id="em_loop"> Doimiy</label><label><input type="checkbox" id="em_add"> Yorqin</label></div>
+      </div>
+    </section>
+
+    <section class="tab" data-tab="world" hidden>
+      <div class="r"><label>Osmon <input type="color" id="wBg"></label><label>Muhit nuri <input type="range" id="wHemi" min="0" max="2" step="0.05"></label></div>
+      <div class="r"><label>Quyosh <input type="range" id="wSun" min="0" max="2" step="0.05"></label><label>Tuman <input type="range" id="wFog" min="0" max="0.2" step="0.005"></label></div>
+      <div class="r"><label><input type="checkbox" id="wShadow"> Soya</label><label><input type="checkbox" id="wGrid"> To'r</label><label><input type="checkbox" id="wFloor"> Zamin soyasi</label></div>
+    </section>
+
+    <section class="tab" data-tab="out" hidden>
+      <div class="r"><button id="oPng">Rasm (PNG)</button><button id="oRec">Videoni yozib olish</button></div>
+      <div class="r"><button id="oGlb">Model + animatsiya (GLB)</button><button id="oObj">Model (OBJ)</button></div>
+      <div class="r"><button id="bSave">Brauzerda saqlash</button><button id="bLoad">Brauzerdan ochish</button></div>
+      <div class="r"><button id="oProj">Loyihani fayl qilish</button><label style="flex:1 1 100%">Loyihani ochish <input type="file" id="oImport" accept=".json,application/json"></label></div>
+      <p class="note">Video yozish multfilmni boshidan oxirigacha real vaqtda o'ynatib yozadi. Ovoz qo'shilgan bo'lsa, videoga kiradi.</p>
+    </section>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
-<script>
-(function(){
-  var $=function(id){return document.getElementById(id)};
-  var view=$('view');
-  var scene=new THREE.Scene(); scene.background=new THREE.Color(0x23262e);
-  var camera=new THREE.PerspectiveCamera(50,1,0.1,200);
-  var HOME=[4.5,3.5,5.5];
-  camera.position.set(HOME[0],HOME[1],HOME[2]);
-  var renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-  renderer.shadowMap.enabled=true;
-  view.insertBefore(renderer.domElement,view.firstChild);
-
-  scene.add(new THREE.HemisphereLight(0xffffff,0x3a3f4b,0.8));
-  var sun=new THREE.DirectionalLight(0xffffff,0.9);
-  sun.position.set(5,8,4); sun.castShadow=true; sun.shadow.bias=-0.0008; sun.shadow.mapSize.set(1024,1024);
-  var sc=sun.shadow.camera; sc.left=-8; sc.right=8; sc.top=8; sc.bottom=-8;
-  scene.add(sun);
-  var grid=new THREE.GridHelper(20,20,0x6b7180,0x3a3f4b); scene.add(grid);
-  var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.ShadowMaterial({opacity:0.25}));
-  floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
-
-  var orbit=new THREE.OrbitControls(camera,renderer.domElement);
-  orbit.enableDamping=true; orbit.dampingFactor=0.12; orbit.target.set(0,0.5,0);
-  var tc=new THREE.TransformControls(camera,renderer.domElement);
-  tc.setSize(1.1); scene.add(tc);
-  tc.addEventListener('dragging-changed',function(e){orbit.enabled=!e.value; if(!e.value) commit();});
-
-  var objs=[], sel=null, snapOn=false;
-  var PALETTE=[0x4a90d9,0xe5604d,0x62c370,0xe8b84a,0xa77bd8,0x4fc3c3];
-  var colorIdx=0;
-
-  function geo(t){
-    switch(t){
-      case 'sphere': return new THREE.SphereGeometry(0.5,32,20);
-      case 'cylinder': return new THREE.CylinderGeometry(0.5,0.5,1,32);
-      case 'cone': return new THREE.CylinderGeometry(0,0.5,1,32);
-      case 'torus': return new THREE.TorusGeometry(0.4,0.15,16,48);
-      case 'plane': return new THREE.PlaneGeometry(1.5,1.5);
-      default: return new THREE.BoxGeometry(1,1,1);
-    }
-  }
-  function make(t,color,metal,rough,wire){
-    var m=new THREE.MeshStandardMaterial({color:color,metalness:metal,roughness:rough,wireframe:wire,side:t==='plane'?THREE.DoubleSide:THREE.FrontSide});
-    var o=new THREE.Mesh(geo(t),m); o.userData.type=t; o.userData.kf=[]; o.castShadow=true; o.receiveShadow=true;
-    scene.add(o); objs.push(o); return o;
-  }
-  function addObj(t){
-    var o=make(t,PALETTE[colorIdx++%PALETTE.length],0.1,0.5,false);
-    var r=Math.min(objs.length,6)*0.25;
-    o.position.set(orbit.target.x+(Math.random()-0.5)*r*2,t==='plane'?0.01:0.5,orbit.target.z+(Math.random()-0.5)*r*2);
-    if(t==='plane') o.rotation.x=-Math.PI/2;
-    if(t==='torus') o.position.y=0.55;
-    select(o); commit(); toast('Qo\'shildi');
-  }
-
-  function select(o){
-    sel=o||null;
-    if(sel){ tc.attach(sel); $('props').hidden=false; syncProps(); }
-    else { tc.detach(); $('props').hidden=true; }
-    $('bDup').disabled=$('bDel').disabled=!sel;
-  }
-  function syncProps(){
-    if(!sel) return; var m=sel.material;
-    $('pColor').value='#'+m.color.getHexString();
-    $('pMetal').value=m.metalness; $('pRough').value=m.roughness; $('pWire').checked=m.wireframe;
-  }
-
-  /* history + persistence */
-  function snapshot(){
-    return {sel:objs.indexOf(sel),objs:objs.map(function(o){var m=o.material;return{
-      t:o.userData.type,c:m.color.getHex(),m:m.metalness,r:m.roughness,w:m.wireframe,
-      p:o.position.toArray(),q:[o.rotation.x,o.rotation.y,o.rotation.z],s:o.scale.toArray(),k:o.userData.kf}})};
-  }
-  function restore(st){
-    tc.detach(); grid.visible=true; floor.visible=true; scene.background.set(0x23262e);
-    objs.forEach(function(o){scene.remove(o);o.geometry.dispose();o.material.dispose();});
-    objs=[];
-    st.objs.forEach(function(d){
-      var o=make(d.t,d.c,d.m,d.r,d.w);
-      o.position.fromArray(d.p); o.rotation.set(d.q[0],d.q[1],d.q[2]); o.scale.fromArray(d.s);
-      o.userData.kf=d.k||[];
-    });
-    select(st.sel>=0?objs[st.sel]:null);
-  }
-  var hist=[],hi=-1;
-  function commit(){
-    hist=hist.slice(0,hi+1); hist.push(JSON.stringify(snapshot())); hi=hist.length-1;
-    if(hist.length>60){hist.shift();hi--;}
-    updUndo();
-  }
-  function updUndo(){ $('bUndo').disabled=hi<=0; $('bRedo').disabled=hi>=hist.length-1; }
-  function go(d){ var n=hi+d; if(n<0||n>=hist.length) return; hi=n; restore(JSON.parse(hist[hi])); updUndo(); }
-
-  var tt;
-  function toast(s){ var t=$('toast'); t.textContent=s; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove('show')},1400); }
-
-  /* animation: keyframes per object, linear interpolation, 60 s timeline */
-  var DUR=60,time=0,playing=false,last=0,camTrack=null;
-  function r3(v){return Math.round(v*1000)/1000}
-  function lerpA(a,b,u){return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u,a[2]+(b[2]-a[2])*u]}
-  function sm(a,b,t){var x=Math.min(1,Math.max(0,(t-a)/(b-a)));return x*x*(3-2*x)}
-  function poseAt(kf,t){
-    var n=kf.length; if(t<=kf[0].t) return kf[0]; if(t>=kf[n-1].t) return kf[n-1];
-    var i=0; while(i<n-2&&kf[i+1].t<t) i++;
-    var a=kf[i],b=kf[i+1],u=(t-a.t)/((b.t-a.t)||1);
-    return {p:lerpA(a.p,b.p,u),q:lerpA(a.q,b.q,u),s:lerpA(a.s,b.s,u)};
-  }
-  function applyPose(t){
-    objs.forEach(function(o){
-      var kf=o.userData.kf; if(!kf||!kf.length) return;
-      var k=poseAt(kf,t); o.position.fromArray(k.p); o.rotation.set(k.q[0],k.q[1],k.q[2]); o.scale.fromArray(k.s);
-    });
-    if(camTrack){
-      var n=camTrack.length,i=0; while(i<n-2&&camTrack[i+1].t<t) i++;
-      var a=camTrack[i],b=camTrack[i+1],u=sm(a.t,b.t,t);
-      camera.position.fromArray(lerpA(a.p,b.p,u)); orbit.target.fromArray(lerpA(a.g,b.g,u));
-    }
-  }
-  function fmt(t){var s=Math.floor(t);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2)}
-  function syncTime(){ $('tSlider').value=time; $('tLabel').textContent=fmt(time)+' / '+fmt(DUR); }
-  function setTime(t){ time=Math.min(DUR,Math.max(0,t)); applyPose(time); syncTime(); }
-  function startPlay(){
-    if(time>=DUR-0.01) time=0;
-    select(null); playing=true; orbit.enabled=!camTrack; last=performance.now(); $('bPlay').textContent='Pauza'; $('bPlay').classList.add('on');
-  }
-  function stopPlay(){ playing=false; orbit.enabled=true; $('bPlay').textContent='Play'; $('bPlay').classList.remove('on'); }
-
-  function buildDemo(){
-    stopPlay(); restore({sel:-1,objs:[]}); grid.visible=false; floor.visible=false; scene.background.set(0x8fd0f0);
-    function fr(x){return x-Math.floor(x)}
-    function hop(v,h){return h*4*v*(1-v)}
-    function track(o,fn,step){
-      var kf=[],n=Math.round(DUR/step);
-      for(var i=0;i<=n;i++){var t=i*step,k=fn(t);kf.push({t:r3(t),p:k[0].map(r3),q:k[1].map(r3),s:k[2].map(r3)});}
-      o.userData.kf=kf;
-    }
-    var PI=Math.PI;
-    var ground=make('plane',0x5fae5a,0,1,false); ground.rotation.x=-PI/2; ground.position.y=0.005; ground.scale.set(14,14,1);
-
-    var ball=make('sphere',0xe5604d,0.2,0.35,false);
-    track(ball,function(t){
-      var x,z=0,v,h,sc=1;
-      if(t<12){x=-5+5*t/12;v=fr(5*t/12);h=2;}
-      else if(t<24){var u=(t-12)/12;x=-3*u;v=fr(4*u);h=0.6;}
-      else if(t<38){var w=t<31?(t-24)/7:(t-31)/7;x=t<31?-3+6*w:3-6*w;v=w;h=1.7;}
-      else if(t<52){var th=PI+(t-38)/14*4*PI;x=3*Math.cos(th);z=3*Math.sin(th);v=fr(t-38);h=0.8;}
-      else{x=-3*(1-sm(52,58,t));v=0;h=0;sc=1+1.2*sm(52,60,t);}
-      var k=0.22*Math.pow(1-4*v*(1-v),8);
-      return [[x,0.5*sc*(1-k)+hop(v,h),z],[0,0,0],[sc*(1+k),sc*(1-k),sc*(1+k)]];
-    },0.1);
-
-    var cube=make('cube',0x4a90d9,0.1,0.5,false);
-    track(cube,function(t){
-      var x=8,z=0,y=0.5,ry=0,s=sm(12,13,t);
-      if(t>=12&&t<24){var u=sm(12,18,t);x=8-5.5*u;ry=4*PI*u;}
-      else if(t>=24&&t<38){x=2.5;ry=4*PI+(t-24)*1.5;y=0.5+0.35*Math.abs(Math.sin(PI*(t-24)));}
-      else if(t>=38){var f=t<52?(t-38)/14*4*PI:4*PI;x=2.5*Math.cos(f);z=2.5*Math.sin(f);ry=4*PI+21+(Math.min(t,52)-38)*3;
-        y=t<52?0.5+0.4*Math.abs(Math.sin(2*PI*(t-38))):0.5;s=1-sm(52,58,t);}
-      else if(t>=24){}
-      if(t>=18&&t<24){x=2.5;ry=4*PI;}
-      return [[x,y,z],[0,ry,0],[s,s,s]];
-    },0.1);
-
-    var ring=make('torus',0xa77bd8,0.3,0.4,false);
-    track(ring,function(t){
-      var p=[8,6,0],s=0,ry=PI/2;
-      if(t>=24&&t<27){var u=sm(24,27,t);p=[8-8*u,6-3.8*u,0];s=3.5*sm(24,26,t);}
-      else if(t>=27&&t<38){p=[0,2.2,0];s=3.5*(1+0.04*Math.sin(3*(t-27)));}
-      else if(t>=38){var e=sm(38,42,t);p=[0,2.2+1.8*e,0];ry=PI/2+(Math.min(t,52)-38)*1.2;s=3.5*(1-0.4*e)*(1-sm(52,58,t))/(1);}
-      return [p,[0,ry,0],[s,s,s]];
-    },0.25);
-
-    [[-4,-3.5],[3.5,-3.5],[6,-2]].forEach(function(pos,i){
-      var trunk=make('cylinder',0x8a5a3a,0,0.9,false),cone=make('cone',0x2f8f4e,0,0.8,false);
-      function g(t){return sm(2*i,2*i+6,t);}
-      function sway(t){return t>38?0.06*Math.sin(2*(t-38))*sm(38,40,t):0;}
-      track(trunk,function(t){var q=g(t);return [[pos[0],0.5*q,pos[1]],[0,0,0],[0.3*q,q,0.3*q]];},0.5);
-      track(cone,function(t){var q=g(t);return [[pos[0],2*q,pos[1]],[0,0,sway(t)],[1.6*q,2*q,1.6*q]];},0.25);
-    });
-
-    var sun=make('sphere',0xffd54a,0,1,false);
-    track(sun,function(t){var s=1.6+0.15*Math.sin(t*1.5);return [[6,6.5,-8],[0,0,0],[s,s,s]];},0.5);
-
-    camTrack=[
-      {t:0,p:[1,3.5,11],g:[-2,1,0]},{t:12,p:[4,4,10],g:[0,1,0]},{t:24,p:[7,3.5,7],g:[0,1.5,0]},
-      {t:38,p:[0,5,9],g:[0,1.5,0]},{t:52,p:[-6,5,8],g:[0,1.5,0]},{t:60,p:[0,3,6],g:[0,1,0]}];
-    select(null); hist=[]; hi=-1; commit(); setTime(0);
-  }
-
-  /* tap to select */
-  var ray=new THREE.Raycaster(), ptr=new THREE.Vector2(), down=null;
-  var cv=renderer.domElement;
-  cv.addEventListener('pointerdown',function(e){
-    down={x:e.clientX,y:e.clientY,t:Date.now(),onGizmo:tc.axis!==null&&tc.axis!==undefined,multi:false};
-  });
-  cv.addEventListener('pointermove',function(e){ if(down&&e.isPrimary===false) down.multi=true; });
-  cv.addEventListener('pointerup',function(e){
-    if(!down) return; var d=down; down=null;
-    if(d.onGizmo||d.multi||tc.dragging) return;
-    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>6||Date.now()-d.t>450) return;
-    var r=cv.getBoundingClientRect();
-    ptr.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
-    ray.setFromCamera(ptr,camera);
-    var hit=ray.intersectObjects(objs,false)[0];
-    select(hit?hit.object:null);
-  });
-  cv.addEventListener('touchstart',function(e){ if(down&&e.touches.length>1) down.multi=true; },{passive:true});
-
-  /* UI wiring */
-  function menu(open){ $('menu').hidden=!open; $('bAdd').setAttribute('aria-expanded',open); }
-  $('bAdd').onclick=function(){ menu($('menu').hidden); };
-  $('menu').addEventListener('click',function(e){ var t=e.target.getAttribute&&e.target.getAttribute('data-add'); if(t){ addObj(t); menu(false);} });
-  $('bUndo').onclick=function(){go(-1)}; $('bRedo').onclick=function(){go(1)};
-  $('bCam').onclick=function(){
-    var tgt=sel?sel.position.clone():new THREE.Vector3(0,0.5,0);
-    orbit.target.copy(tgt); camera.position.set(tgt.x+HOME[0],tgt.y+HOME[1],tgt.z+HOME[2]);
-  };
-  function mode(m,id){
-    tc.setMode(m); ['mMove','mRot','mScale'].forEach(function(k){$(k).classList.toggle('on',k===id)});
-  }
-  $('mMove').onclick=function(){mode('translate','mMove')};
-  $('mRot').onclick=function(){mode('rotate','mRot')};
-  $('mScale').onclick=function(){mode('scale','mScale')};
-  $('bSnap').onclick=function(){
-    snapOn=!snapOn; $('bSnap').classList.toggle('on',snapOn);
-    tc.setTranslationSnap(snapOn?0.5:null); tc.setRotationSnap(snapOn?THREE.MathUtils.degToRad(15):null); tc.setScaleSnap(snapOn?0.25:null);
-    toast(snapOn?'Qadam yoqildi':'Qadam o\'chirildi');
-  };
-  $('bDup').onclick=function(){
-    if(!sel) return; var m=sel.material;
-    var o=make(sel.userData.type,m.color.getHex(),m.metalness,m.roughness,m.wireframe);
-    o.position.copy(sel.position).add(new THREE.Vector3(0.6,0,0.6)); o.rotation.copy(sel.rotation); o.scale.copy(sel.scale);
-    select(o); commit(); toast('Nusxalandi');
-  };
-  $('bDel').onclick=function(){
-    if(!sel) return; var o=sel; select(null);
-    scene.remove(o); objs.splice(objs.indexOf(o),1); o.geometry.dispose(); o.material.dispose(); commit(); toast('O\'chirildi');
-  };
-  $('pColor').oninput=function(e){ if(sel) sel.material.color.set(e.target.value); };
-  $('pMetal').oninput=function(e){ if(sel) sel.material.metalness=+e.target.value; };
-  $('pRough').oninput=function(e){ if(sel) sel.material.roughness=+e.target.value; };
-  ['pColor','pMetal','pRough'].forEach(function(id){ $(id).onchange=commit; });
-  $('pWire').onchange=function(e){ if(sel){ sel.material.wireframe=e.target.checked; commit(); } };
-  $('bSave').onclick=function(){
-    try{ localStorage.setItem('mini-blender-scene',JSON.stringify(snapshot())); toast('Saqlandi'); }
-    catch(err){ toast('Saqlab bo\'lmadi'); }
-  };
-  $('bLoad').onclick=function(){
-    try{
-      var s=localStorage.getItem('mini-blender-scene');
-      if(!s){ toast('Saqlangan sahna yo\'q'); return; }
-      restore(JSON.parse(s)); commit(); toast('Yuklandi');
-    }catch(err){ toast('Yuklab bo\'lmadi'); }
-  };
-  $('bDemo').onclick=function(){ buildDemo(); toast('Namuna multfilm yuklandi. Play bosing'); };
-  $('bPlay').onclick=function(){ if(playing) stopPlay(); else startPlay(); };
-  $('tSlider').oninput=function(e){ if(playing) stopPlay(); setTime(+e.target.value); };
-  $('bKey').onclick=function(){
-    if(!sel){ toast('Avval ob\'ektni tanlang'); return; }
-    var k={t:r3(time),p:sel.position.toArray().map(r3),q:[sel.rotation.x,sel.rotation.y,sel.rotation.z].map(r3),s:sel.scale.toArray().map(r3)};
-    var kf=sel.userData.kf.filter(function(x){return Math.abs(x.t-k.t)>=0.05});
-    kf.push(k); kf.sort(function(a,b){return a.t-b.t}); sel.userData.kf=kf; commit(); toast('Kadr qo\'shildi');
-  };
-  window.__mb={objs:function(){return objs},time:function(){return time},playing:function(){return playing}};
-  window.addEventListener('keydown',function(e){
-    if(e.target&&/input|textarea/i.test(e.target.tagName)) return;
-    if(e.key==='Delete'||e.key==='Backspace') $('bDel').click();
-    else if(e.key==='g') $('mMove').click(); else if(e.key==='r') $('mRot').click(); else if(e.key==='s') $('mScale').click();
-    else if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); go(e.shiftKey?1:-1); }
-  });
-
-  function resize(){
-    var w=view.clientWidth,h=view.clientHeight; if(!w||!h) return;
-    renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
-  }
-  if(window.ResizeObserver) new ResizeObserver(resize).observe(view); else window.addEventListener('resize',resize);
-  resize();
-
-  /* starting scene */
-  (function(){
-    var a=make('cube',0x4a90d9,0.1,0.5,false); a.position.set(-1.4,0.5,0);
-    var b=make('sphere',0xe5604d,0.2,0.35,false); b.position.set(0.2,0.5,0.4);
-    var c=make('cone',0xe8b84a,0.1,0.6,false); c.position.set(1.7,0.5,-0.3);
-    select(null); commit();
-  })();
-
-  if(!/[?&#]edit/.test(location.hash+location.search)){ buildDemo(); startPlay(); }
-
-  (function loop(){
-    requestAnimationFrame(loop);
-    if(playing){
-      var now=performance.now(); time+=Math.min(0.25,(now-last)/1000); last=now;
-      if(time>=DUR){ time=DUR; stopPlay(); }
-      applyPose(time); syncTime();
-    }
-    orbit.update(); renderer.render(scene,camera);
-  })();
-})();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/anim.js"></script>
+<script src="js/edit.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/rig.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/boot.js"></script>
 
 </html>
