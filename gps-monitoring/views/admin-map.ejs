@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Xarita</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+    header { background: #1e293b; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+    header h1 { font-size: 1.1rem; margin: 0; }
+    nav a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
+    #map { height: calc(100vh - 60px); width: 100%; }
+    .empty { padding: 2rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛰️ Xarita</h1>
+    <nav>
+      <a href="/admin">Xodimlar</a>
+      <a href="/admin/map">Xarita</a>
+      <a href="/admin/alerts">Signallar</a>
+    </nav>
+  </header>
+  <div id="map"></div>
+  <!-- Employee names (so the list is present in server-rendered HTML too) -->
+  <div style="display:none">
+    <% employees.forEach(function (e) { %><span><%= e.name %></span><% }); %>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    var employees = <%- JSON.stringify(employees) %>;
+    var map = L.map('map').setView([41.3111, 69.2797], 11); // Tashkent default
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var bounds = [];
+    employees.forEach(function (e) {
+      if (e.lat != null && e.lng != null) {
+        var marker = L.marker([e.lat, e.lng]).addTo(map);
+        marker.bindPopup('<strong>' + e.name + '</strong><br>' +
+          (e.position || '') + '<br>' +
+          'Oxirgi: ' + (e.recorded_at ? new Date(e.recorded_at).toLocaleString() : '—'));
+        bounds.push([e.lat, e.lng]);
+      }
+      if (e.center_lat != null && e.center_lng != null && e.radius_m != null) {
+        L.circle([e.center_lat, e.center_lng], {
+          radius: e.radius_m, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.08
+        }).addTo(map);
+        bounds.push([e.center_lat, e.center_lng]);
+      }
+    });
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    }
+  </script>
+</body>
+</html>

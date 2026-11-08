@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Signallar</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+    header { background: #1e293b; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+    header h1 { font-size: 1.1rem; margin: 0; }
+    nav a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
+    main { padding: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: .6rem; border-bottom: 1px solid #334155; }
+    .type { font-weight: 700; }
+    .zone_violation { color: #f87171; }
+    .outside_hours { color: #fbbf24; }
+    .long_stop { color: #a78bfa; }
+    .signal_loss { color: #60a5fa; }
+    .resolved { opacity: .5; }
+    button { padding: .35rem .7rem; border: 0; border-radius: 6px; background: #16a34a; color: #fff; cursor: pointer; font-size: .8rem; }
+    .done { color: #4ade80; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚨 Signallar</h1>
+    <nav>
+      <a href="/admin">Xodimlar</a>
+      <a href="/admin/map">Xarita</a>
+      <a href="/admin/alerts">Signallar</a>
+    </nav>
+  </header>
+  <main>
+    <table>
+      <thead>
+        <tr><th>Vaqt</th><th>Xodim</th><th>Turi</th><th>Tafsilot</th><th>Holat</th></tr>
+      </thead>
+      <tbody>
+        <% alerts.forEach(function (a) { %>
+          <tr class="<%= a.resolved ? 'resolved' : '' %>">
+            <td><%= new Date(a.created_at).toLocaleString() %></td>
+            <td><%= a.employee_name %></td>
+            <td class="type <%= a.type %>"><%= a.type %></td>
+            <td><%= a.details || '' %></td>
+            <td>
+              <% if (a.resolved) { %>
+                <span class="done">✓ Hal qilingan</span>
+              <% } else { %>
+                <form method="POST" action="/admin/alerts/<%= a.id %>/resolve" style="display:inline">
+                  <button type="submit">Resolved deb belgilash</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+        <% if (alerts.length === 0) { %>
+          <tr><td colspan="5">Signallar yo'q.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

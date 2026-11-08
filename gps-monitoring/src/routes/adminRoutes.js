@@ -72,6 +72,37 @@ function adminRoutes(db, options) {
     res.render('admin-zone', { employee, zone });
   });
 
+  // --- Map ---
+  router.get('/map', (req, res) => {
+    const employees = db.prepare(`
+      SELECT e.id, e.name, e.phone, e.position,
+             l.lat, l.lng, l.recorded_at,
+             z.center_lat, z.center_lng, z.radius_m
+      FROM employees e
+      LEFT JOIN locations l
+        ON l.id = (SELECT id FROM locations WHERE employee_id = e.id ORDER BY recorded_at DESC LIMIT 1)
+      LEFT JOIN zones z ON z.employee_id = e.id
+      ORDER BY e.name ASC
+    `).all();
+    res.render('admin-map', { employees });
+  });
+
+  // --- Alerts ---
+  router.get('/alerts', (req, res) => {
+    const alerts = db.prepare(`
+      SELECT a.*, e.name AS employee_name
+      FROM alerts a
+      JOIN employees e ON e.id = a.employee_id
+      ORDER BY a.created_at DESC
+    `).all();
+    res.render('admin-alerts', { alerts });
+  });
+
+  router.post('/alerts/:id/resolve', (req, res) => {
+    db.prepare('UPDATE alerts SET resolved = 1 WHERE id = ?').run(req.params.id);
+    res.redirect('/admin/alerts');
+  });
+
   router.post('/employees/:id/zone', (req, res) => {
     const { center_lat, center_lng, radius_m, work_start, work_end } = req.body;
     db.prepare(`
