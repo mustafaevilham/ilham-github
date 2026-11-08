@@ -377,6 +377,8 @@ button.danger{color:#ff8a80}
     select(null); commit();
   })();
 
+  if(!/[?&#]edit/.test(location.hash+location.search)){ buildDemo(); startPlay(); }
+
   (function loop(){
     requestAnimationFrame(loop);
     if(playing){
