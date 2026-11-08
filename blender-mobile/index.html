@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mini Blender</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600&display=swap">
+<style>
+/* Layout: full-screen 3D viewport, top action bar, bottom tool + property dock. Single dark look (3D editors read best dark). */
+:root{
+  --bg:#15171c; --panel:#1e2128; --line:#333845; --fg:#e6e8ee; --muted:#8d93a3; --accent:#ea7600; --accent-fg:#1a1100;
+  --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:13px;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+#app{position:relative;height:100%;display:flex;flex-direction:column;gap:8px;padding-block:8px}
+#view{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#23262e;border:1px solid var(--line)}
+#view canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bar{justify-content:space-between}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:44px;min-width:44px;padding:0 12px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:active{background:#2a2e38}
+button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.4}
+button.danger{color:#ff8a80}
+.seg{display:flex;flex:1;gap:6px}
+.seg button{flex:1}
+#menu{position:absolute;left:8px;top:8px;z-index:5;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#menu[hidden]{display:none}
+#props{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+#props[hidden]{display:none}
+#props label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+#props input[type=range]{width:88px;accent-color:var(--accent)}
+#props input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px}
+#hint{position:absolute;left:10px;bottom:8px;right:10px;color:var(--muted);font-size:11px;pointer-events:none;text-shadow:0 1px 2px #000}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-fg);padding:6px 12px;border-radius:999px;font-weight:600;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+
+<div id="app">
+  <div class="row bar">
+    <button id="bAdd" aria-expanded="false">+ Qo'shish</button>
+    <button id="bUndo" aria-label="Bekor qilish">Bekor</button>
+    <button id="bRedo" aria-label="Qaytarish">Qayta</button>
+    <button id="bCam">Kamera</button>
+    <button id="bSave">Saqlash</button>
+    <button id="bLoad">Yuklash</button>
+  </div>
+  <div id="view">
+    <div id="menu" hidden>
+      <button data-add="cube">Kub</button>
+      <button data-add="sphere">Shar</button>
+      <button data-add="cylinder">Silindr</button>
+      <button data-add="cone">Konus</button>
+      <button data-add="torus">Torus</button>
+      <button data-add="plane">Tekislik</button>
+    </div>
+    <div id="toast" role="status"></div>
+    <div id="hint">1 barmoq: aylantirish · 2 barmoq: surish va zoom · ob'ektga bosing: tanlash</div>
+  </div>
+  <div id="props" hidden>
+    <label>Rang <input type="color" id="pColor" value="#4a90d9"></label>
+    <label>Metall <input type="range" id="pMetal" min="0" max="1" step="0.05"></label>
+    <label>Silliq <input type="range" id="pRough" min="0" max="1" step="0.05"></label>
+    <label><input type="checkbox" id="pWire"> Tor</label>
+  </div>
+  <div class="row">
+    <div class="seg">
+      <button id="mMove" class="on">Ko'chir</button>
+      <button id="mRot">Aylantir</button>
+      <button id="mScale">O'lcham</button>
+    </div>
+    <button id="bSnap">Qadam</button>
+    <button id="bDup">Nusxa</button>
+    <button id="bDel" class="danger">O'chir</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var view=$('view');
+  var scene=new THREE.Scene(); scene.background=new THREE.Color(0x23262e);
+  var camera=new THREE.PerspectiveCamera(50,1,0.1,200);
+  var HOME=[4.5,3.5,5.5];
+  camera.position.set(HOME[0],HOME[1],HOME[2]);
+  var renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.shadowMap.enabled=true;
+  view.insertBefore(renderer.domElement,view.firstChild);
+
+  scene.add(new THREE.HemisphereLight(0xffffff,0x3a3f4b,0.8));
+  var sun=new THREE.DirectionalLight(0xffffff,0.9);
+  sun.position.set(5,8,4); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024);
+  var sc=sun.shadow.camera; sc.left=-8; sc.right=8; sc.top=8; sc.bottom=-8;
+  scene.add(sun);
+  var grid=new THREE.GridHelper(20,20,0x6b7180,0x3a3f4b); scene.add(grid);
+  var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.ShadowMaterial({opacity:0.25}));
+  floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+
+  var orbit=new THREE.OrbitControls(camera,renderer.domElement);
+  orbit.enableDamping=true; orbit.dampingFactor=0.12; orbit.target.set(0,0.5,0);
+  var tc=new THREE.TransformControls(camera,renderer.domElement);
+  tc.setSize(1.1); scene.add(tc);
+  tc.addEventListener('dragging-changed',function(e){orbit.enabled=!e.value; if(!e.value) commit();});
+
+  var objs=[], sel=null, snapOn=false;
+  var PALETTE=[0x4a90d9,0xe5604d,0x62c370,0xe8b84a,0xa77bd8,0x4fc3c3];
+  var colorIdx=0;
+
+  function geo(t){
+    switch(t){
+      case 'sphere': return new THREE.SphereGeometry(0.5,32,20);
+      case 'cylinder': return new THREE.CylinderGeometry(0.5,0.5,1,32);
+      case 'cone': return new THREE.CylinderGeometry(0,0.5,1,32);
+      case 'torus': return new THREE.TorusGeometry(0.4,0.15,16,48);
+      case 'plane': return new THREE.PlaneGeometry(1.5,1.5);
+      default: return new THREE.BoxGeometry(1,1,1);
+    }
+  }
+  function make(t,color,metal,rough,wire){
+    var m=new THREE.MeshStandardMaterial({color:color,metalness:metal,roughness:rough,wireframe:wire,side:t==='plane'?THREE.DoubleSide:THREE.FrontSide});
+    var o=new THREE.Mesh(geo(t),m); o.userData.type=t; o.castShadow=true; o.receiveShadow=true;
+    scene.add(o); objs.push(o); return o;
+  }
+  function addObj(t){
+    var o=make(t,PALETTE[colorIdx++%PALETTE.length],0.1,0.5,false);
+    var r=Math.min(objs.length,6)*0.25;
+    o.position.set(orbit.target.x+(Math.random()-0.5)*r*2,t==='plane'?0.01:0.5,orbit.target.z+(Math.random()-0.5)*r*2);
+    if(t==='plane') o.rotation.x=-Math.PI/2;
+    if(t==='torus') o.position.y=0.55;
+    select(o); commit(); toast('Qo\'shildi');
+  }
+
+  function select(o){
+    sel=o||null;
+    if(sel){ tc.attach(sel); $('props').hidden=false; syncProps(); }
+    else { tc.detach(); $('props').hidden=true; }
+    $('bDup').disabled=$('bDel').disabled=!sel;
+  }
+  function syncProps(){
+    if(!sel) return; var m=sel.material;
+    $('pColor').value='#'+m.color.getHexString();
+    $('pMetal').value=m.metalness; $('pRough').value=m.roughness; $('pWire').checked=m.wireframe;
+  }
+
+  /* history + persistence */
+  function snapshot(){
+    return {sel:objs.indexOf(sel),objs:objs.map(function(o){var m=o.material;return{
+      t:o.userData.type,c:m.color.getHex(),m:m.metalness,r:m.roughness,w:m.wireframe,
+      p:o.position.toArray(),q:[o.rotation.x,o.rotation.y,o.rotation.z],s:o.scale.toArray()}})};
+  }
+  function restore(st){
+    tc.detach();
+    objs.forEach(function(o){scene.remove(o);o.geometry.dispose();o.material.dispose();});
+    objs=[];
+    st.objs.forEach(function(d){
+      var o=make(d.t,d.c,d.m,d.r,d.w);
+      o.position.fromArray(d.p); o.rotation.set(d.q[0],d.q[1],d.q[2]); o.scale.fromArray(d.s);
+    });
+    select(st.sel>=0?objs[st.sel]:null);
+  }
+  var hist=[],hi=-1;
+  function commit(){
+    hist=hist.slice(0,hi+1); hist.push(JSON.stringify(snapshot())); hi=hist.length-1;
+    if(hist.length>60){hist.shift();hi--;}
+    updUndo();
+  }
+  function updUndo(){ $('bUndo').disabled=hi<=0; $('bRedo').disabled=hi>=hist.length-1; }
+  function go(d){ var n=hi+d; if(n<0||n>=hist.length) return; hi=n; restore(JSON.parse(hist[hi])); updUndo(); }
+
+  var tt;
+  function toast(s){ var t=$('toast'); t.textContent=s; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove('show')},1400); }
+
+  /* tap to select */
+  var ray=new THREE.Raycaster(), ptr=new THREE.Vector2(), down=null;
+  var cv=renderer.domElement;
+  cv.addEventListener('pointerdown',function(e){
+    down={x:e.clientX,y:e.clientY,t:Date.now(),onGizmo:tc.axis!==null&&tc.axis!==undefined,multi:false};
+  });
+  cv.addEventListener('pointermove',function(e){ if(down&&e.isPrimary===false) down.multi=true; });
+  cv.addEventListener('pointerup',function(e){
+    if(!down) return; var d=down; down=null;
+    if(d.onGizmo||d.multi||tc.dragging) return;
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>6||Date.now()-d.t>450) return;
+    var r=cv.getBoundingClientRect();
+    ptr.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+    ray.setFromCamera(ptr,camera);
+    var hit=ray.intersectObjects(objs,false)[0];
+    select(hit?hit.object:null);
+  });
+  cv.addEventListener('touchstart',function(e){ if(down&&e.touches.length>1) down.multi=true; },{passive:true});
+
+  /* UI wiring */
+  function menu(open){ $('menu').hidden=!open; $('bAdd').setAttribute('aria-expanded',open); }
+  $('bAdd').onclick=function(){ menu($('menu').hidden); };
+  $('menu').addEventListener('click',function(e){ var t=e.target.getAttribute&&e.target.getAttribute('data-add'); if(t){ addObj(t); menu(false);} });
+  $('bUndo').onclick=function(){go(-1)}; $('bRedo').onclick=function(){go(1)};
+  $('bCam').onclick=function(){
+    var tgt=sel?sel.position.clone():new THREE.Vector3(0,0.5,0);
+    orbit.target.copy(tgt); camera.position.set(tgt.x+HOME[0],tgt.y+HOME[1],tgt.z+HOME[2]);
+  };
+  function mode(m,id){
+    tc.setMode(m); ['mMove','mRot','mScale'].forEach(function(k){$(k).classList.toggle('on',k===id)});
+  }
+  $('mMove').onclick=function(){mode('translate','mMove')};
+  $('mRot').onclick=function(){mode('rotate','mRot')};
+  $('mScale').onclick=function(){mode('scale','mScale')};
+  $('bSnap').onclick=function(){
+    snapOn=!snapOn; $('bSnap').classList.toggle('on',snapOn);
+    tc.setTranslationSnap(snapOn?0.5:null); tc.setRotationSnap(snapOn?THREE.MathUtils.degToRad(15):null); tc.setScaleSnap(snapOn?0.25:null);
+    toast(snapOn?'Qadam yoqildi':'Qadam o\'chirildi');
+  };
+  $('bDup').onclick=function(){
+    if(!sel) return; var m=sel.material;
+    var o=make(sel.userData.type,m.color.getHex(),m.metalness,m.roughness,m.wireframe);
+    o.position.copy(sel.position).add(new THREE.Vector3(0.6,0,0.6)); o.rotation.copy(sel.rotation); o.scale.copy(sel.scale);
+    select(o); commit(); toast('Nusxalandi');
+  };
+  $('bDel').onclick=function(){
+    if(!sel) return; var o=sel; select(null);
+    scene.remove(o); objs.splice(objs.indexOf(o),1); o.geometry.dispose(); o.material.dispose(); commit(); toast('O\'chirildi');
+  };
+  $('pColor').oninput=function(e){ if(sel) sel.material.color.set(e.target.value); };
+  $('pMetal').oninput=function(e){ if(sel) sel.material.metalness=+e.target.value; };
+  $('pRough').oninput=function(e){ if(sel) sel.material.roughness=+e.target.value; };
+  ['pColor','pMetal','pRough'].forEach(function(id){ $(id).onchange=commit; });
+  $('pWire').onchange=function(e){ if(sel){ sel.material.wireframe=e.target.checked; commit(); } };
+  $('bSave').onclick=function(){
+    try{ localStorage.setItem('mini-blender-scene',JSON.stringify(snapshot())); toast('Saqlandi'); }
+    catch(err){ toast('Saqlab bo\'lmadi'); }
+  };
+  $('bLoad').onclick=function(){
+    try{
+      var s=localStorage.getItem('mini-blender-scene');
+      if(!s){ toast('Saqlangan sahna yo\'q'); return; }
+      restore(JSON.parse(s)); commit(); toast('Yuklandi');
+    }catch(err){ toast('Yuklab bo\'lmadi'); }
+  };
+  window.addEventListener('keydown',function(e){
+    if(e.target&&/input|textarea/i.test(e.target.tagName)) return;
+    if(e.key==='Delete'||e.key==='Backspace') $('bDel').click();
+    else if(e.key==='g') $('mMove').click(); else if(e.key==='r') $('mRot').click(); else if(e.key==='s') $('mScale').click();
+    else if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); go(e.shiftKey?1:-1); }
+  });
+
+  function resize(){
+    var w=view.clientWidth,h=view.clientHeight; if(!w||!h) return;
+    renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+  if(window.ResizeObserver) new ResizeObserver(resize).observe(view); else window.addEventListener('resize',resize);
+  resize();
+
+  /* starting scene */
+  (function(){
+    var a=make('cube',0x4a90d9,0.1,0.5,false); a.position.set(-1.4,0.5,0);
+    var b=make('sphere',0xe5604d,0.2,0.35,false); b.position.set(0.2,0.5,0.4);
+    var c=make('cone',0xe8b84a,0.1,0.6,false); c.position.set(1.7,0.5,-0.3);
+    select(null); commit();
+  })();
+
+  (function loop(){
+    requestAnimationFrame(loop); orbit.update(); renderer.render(scene,camera);
+  })();
+})();
+</script>
+
+</html>
