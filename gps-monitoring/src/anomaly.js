@@ -28,8 +28,13 @@ function minutesOfDay(hhmm) {
   return h * 60 + m;
 }
 
-function isOutsideWorkHours(date, zone) {
-  const minute = date.getHours() * 60 + date.getMinutes();
+// tzOffsetMinutes is the business timezone's offset from UTC (default +300 =
+// UTC+5, Tashkent). `date` is a UTC instant (pings arrive as ISO `...Z`); we
+// shift it into business-local time deterministically, independent of the
+// server's own timezone, before comparing against the wall-clock window.
+function isOutsideWorkHours(date, zone, tzOffsetMinutes = 300) {
+  const local = new Date(date.getTime() + tzOffsetMinutes * 60000);
+  const minute = local.getUTCHours() * 60 + local.getUTCMinutes();
   const start = minutesOfDay(zone.work_start);
   const end = minutesOfDay(zone.work_end);
   let inside;

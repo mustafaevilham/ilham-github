@@ -21,17 +21,32 @@ test('isOutsideZone: point just outside the radius is outside', () => {
   assert.strictEqual(isOutsideZone(41.30989, 69.2, zone), true);
 });
 
-test('isOutsideWorkHours: normal (non-wrapping) window', () => {
+// Pings arrive as UTC ISO timestamps; the work-hours window is wall-clock in
+// the business timezone (default UTC+5, Tashkent). These use explicit `Z`
+// times so they are deterministic regardless of the server's own timezone.
+test('isOutsideWorkHours: normal (non-wrapping) window evaluated in business tz (UTC+5)', () => {
   const zone = { work_start: '09:00', work_end: '18:00' };
-  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T10:00:00'), zone), false);
-  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T20:00:00'), zone), true);
+  // 10:00 Tashkent = 05:00Z -> inside
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T05:00:00Z'), zone), false);
+  // 20:00 Tashkent = 15:00Z -> outside
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T15:00:00Z'), zone), true);
 });
 
-test('isOutsideWorkHours: midnight-wrapping night shift', () => {
+test('isOutsideWorkHours: midnight-wrapping night shift evaluated in business tz (UTC+5)', () => {
   const zone = { work_start: '22:00', work_end: '06:00' };
-  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T23:00:00'), zone), false); // inside, after wrap
-  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T02:00:00'), zone), false); // inside, before wrap
-  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T12:00:00'), zone), true);  // outside, midday
+  // 23:00 Tashkent = 18:00Z -> inside, after wrap
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T18:00:00Z'), zone), false);
+  // 02:00 Tashkent = 21:00Z (prev day) -> inside, before wrap
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T21:00:00Z'), zone), false);
+  // 12:00 Tashkent = 07:00Z -> outside, midday
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T07:00:00Z'), zone), true);
+});
+
+test('isOutsideWorkHours: a UTC-server evaluation does not shift the window (regression)', () => {
+  const zone = { work_start: '09:00', work_end: '18:00' };
+  // 09:30 Tashkent = 04:30Z. A naive getHours() on a UTC server would read
+  // 04:30 and wrongly call this outside hours. With tz handling it is inside.
+  assert.strictEqual(isOutsideWorkHours(new Date('2026-11-08T04:30:00Z'), zone), false);
 });
 
 test('detectLongStop: true when stationary for >= threshold', () => {

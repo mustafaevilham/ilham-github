@@ -27,3 +27,10 @@ test('GET /admin redirects to login when unauthenticated', async () => {
   assert.strictEqual(res.status, 302);
   assert.strictEqual(res.headers.location, '/admin/login');
 });
+
+test('GET /static/offline-queue.js is served (tracking page depends on it)', async () => {
+  const app = buildTestApp();
+  const res = await request(app).get('/static/offline-queue.js');
+  assert.strictEqual(res.status, 200);
+  assert.match(res.text, /removeSent/);
+});

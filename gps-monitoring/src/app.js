@@ -12,6 +12,7 @@ function createApp(db, options) {
 
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
+  app.use('/static', express.static(path.join(__dirname, '..', 'public')));
   app.use(session({
     secret: options.sessionSecret,
     resave: false,
