@@ -20,6 +20,7 @@
     input { width: 100%; padding: .5rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
     .add-btn { margin-top: 1rem; padding: .6rem 1rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
     a.zone { color: #93c5fd; }
+    input.link { width: 190px; padding: .3rem .4rem; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: #93c5fd; font-size: .78rem; }
   </style>
 </head>
 <body>
@@ -49,7 +50,7 @@
     <h2 style="margin-top:2rem">Xodimlar</h2>
     <table>
       <thead>
-        <tr><th>Ism</th><th>Telefon</th><th>Lavozim</th><th>Rozilik</th><th>Oxirgi faollik</th><th>Zona</th></tr>
+        <tr><th>Ism</th><th>Telefon</th><th>Lavozim</th><th>Rozilik</th><th>Havola</th><th>Oxirgi faollik</th><th>Zona</th></tr>
       </thead>
       <tbody>
         <% employees.forEach(function (e) { %>
@@ -64,12 +65,20 @@
                 <span class="badge pending">Kutilmoqda</span>
               <% } %>
             </td>
+            <td>
+              <% if (e.consent_token) { %>
+                <input class="link" type="text" readonly
+                       value="/consent/<%= e.consent_token %>"
+                       onclick="this.select()"
+                       title="Xodimga yuboriladigan rozilik havolasi">
+              <% } else { %>—<% } %>
+            </td>
             <td><%= e.last_seen ? new Date(e.last_seen).toLocaleString() : '—' %></td>
             <td><a class="zone" href="/admin/employees/<%= e.id %>/zone">Zona sozlash</a></td>
           </tr>
         <% }); %>
         <% if (employees.length === 0) { %>
-          <tr><td colspan="6">Hali xodim qo'shilmagan.</td></tr>
+          <tr><td colspan="7">Hali xodim qo'shilmagan.</td></tr>
         <% } %>
       </tbody>
     </table>

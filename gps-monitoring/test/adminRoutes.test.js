@@ -58,6 +58,21 @@ test('POST /admin/employees creates employee + pending consent and logs SMS', as
   assert.ok(lines.some(l => l.includes('+998901112233')));
 });
 
+test('dashboard shows the consent link so the admin can send it to the employee', async () => {
+  const { app, db } = buildAdminApp();
+  const agent = await loginAgent(app);
+  const now = new Date().toISOString();
+  const { lastInsertRowid: employeeId } = db.prepare(
+    'INSERT INTO employees (name, phone, position, created_at) VALUES (?, ?, ?, ?)'
+  ).run('Jasur', '+998901112233', 'courier', now);
+  db.prepare('INSERT INTO consents (employee_id, token, status) VALUES (?, ?, ?)')
+    .run(employeeId, 'tok-abc', 'pending');
+
+  const res = await agent.get('/admin');
+  assert.strictEqual(res.status, 200);
+  assert.match(res.text, /consent\/tok-abc/);
+});
+
 test('POST /admin/employees/:id/zone upserts the zone', async () => {
   const { app, db } = buildAdminApp();
   const agent = await loginAgent(app);
