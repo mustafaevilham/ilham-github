@@ -1,0 +1,19 @@
+{
+  "name": "gps-monitoring",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "bcryptjs": "^2.4.3",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "express-session": "^1.18.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}
