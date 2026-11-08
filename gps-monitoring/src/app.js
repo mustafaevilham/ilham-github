@@ -1,8 +1,8 @@
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
-const { requireAdminAuth } = require('./auth');
 const { employeeRoutes } = require('./routes/employeeRoutes');
+const { adminRoutes } = require('./routes/adminRoutes');
 
 function createApp(db, options) {
   const app = express();
@@ -24,11 +24,7 @@ function createApp(db, options) {
   });
 
   app.use('/consent', employeeRoutes(db));
-
-  // Placeholder — replaced by adminRoutes in Task 8.
-  app.get('/admin', requireAdminAuth, (req, res) => {
-    res.send('OK');
-  });
+  app.use('/admin', adminRoutes(db, options));
 
   return app;
 }

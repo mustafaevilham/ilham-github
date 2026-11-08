@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zona sozlash — <%= employee.name %></title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 1.5rem; }
+    a.back { color: #93c5fd; text-decoration: none; }
+    .card { background: #1e293b; padding: 1.5rem; border-radius: 10px; max-width: 480px; margin-top: 1rem; }
+    label { display: block; margin: .7rem 0 .2rem; font-size: .82rem; }
+    input { width: 100%; padding: .55rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
+    .row { display: flex; gap: 1rem; }
+    .row > div { flex: 1; }
+    button { margin-top: 1.25rem; padding: .65rem 1.25rem; border: 0; border-radius: 6px; background: #16a34a; color: #fff; font-weight: 600; cursor: pointer; }
+    .hint { font-size: .78rem; color: #94a3b8; margin-top: .3rem; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/admin">← Xodimlar ro'yxati</a>
+  <h1>Zona sozlash: <%= employee.name %></h1>
+  <form class="card" method="POST" action="/admin/employees/<%= employee.id %>/zone">
+    <div class="row">
+      <div>
+        <label for="center_lat">Markaz kenglik (lat)</label>
+        <input id="center_lat" name="center_lat" value="<%= zone ? zone.center_lat : '' %>" required>
+      </div>
+      <div>
+        <label for="center_lng">Markaz uzunlik (lng)</label>
+        <input id="center_lng" name="center_lng" value="<%= zone ? zone.center_lng : '' %>" required>
+      </div>
+    </div>
+    <label for="radius_m">Radius (metr)</label>
+    <input id="radius_m" name="radius_m" value="<%= zone ? zone.radius_m : '1000' %>" required>
+    <div class="hint">Shu doira ichi — ruxsat etilgan ish hududi.</div>
+    <div class="row">
+      <div>
+        <label for="work_start">Ish boshlanishi</label>
+        <input id="work_start" name="work_start" type="time" value="<%= zone ? zone.work_start : '09:00' %>" required>
+      </div>
+      <div>
+        <label for="work_end">Ish tugashi</label>
+        <input id="work_end" name="work_end" type="time" value="<%= zone ? zone.work_end : '18:00' %>" required>
+      </div>
+    </div>
+    <div class="hint">Tungi smena (masalan 22:00–06:00) ham qo'llab-quvvatlanadi.</div>
+    <button type="submit">Saqlash</button>
+  </form>
+</body>
+</html>
