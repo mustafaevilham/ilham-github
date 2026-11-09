@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPS kuzatuvga rozilik</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 1rem; }
+    .card { background: #1e293b; padding: 1.75rem; border-radius: 12px; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    h1 { font-size: 1.3rem; }
+    p { line-height: 1.5; font-size: .95rem; }
+    .who { color: #93c5fd; font-weight: 600; }
+    button { width: 100%; margin-top: 1.5rem; padding: .85rem; border: 0; border-radius: 8px; background: #16a34a; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    .note { font-size: .8rem; color: #94a3b8; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/consent/<%= token %>">
+    <h1>GPS kuzatuvga rozilik</h1>
+    <p>
+      Hurmatli <span class="who"><%= employee.name %></span>,
+      <% if (employee.position) { %>(<%= employee.position %>)<% } %>
+      kompaniya sizni <strong>ish vaqtida GPS joylashuv</strong> orqali
+      kuzatishni so'ramoqda.
+    </p>
+    <p>
+      Buning maqsadi — <strong>korrupsiya va qoida buzilishlarini nazorat qilish</strong>.
+      Kuzatuv faqat siz rozilik berganingizdan keyin boshlanadi va kuzatuv
+      sahifasi ochiq bo'lganida ekranda doimo <strong>"GPS kuzatuv FAOL"</strong>
+      degan belgi ko'rinib turadi. Hech qanday ilova o'rnatish shart emas.
+    </p>
+    <button type="submit">Roziman</button>
+    <div class="note">
+      Rozilik bermasangiz, joylashuvingiz yig'ilmaydi. Bu rozilik vaqti
+      bilan birga qayd etiladi.
+    </div>
+  </form>
+</body>
+</html>

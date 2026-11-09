@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPS kuzatuv FAOL</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; display: flex; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; text-align: center; }
+    .banner { background: #16a34a; color: #fff; font-weight: 800; font-size: 1.15rem; padding: 1rem 1.5rem; border-radius: 10px; display: flex; align-items: center; gap: .5rem; box-shadow: 0 6px 20px rgba(22,163,74,.4); }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    .status { margin-top: 1.5rem; font-size: .9rem; color: #cbd5e1; max-width: 420px; line-height: 1.5; }
+    .meta { margin-top: 1rem; font-size: .8rem; color: #94a3b8; }
+    code { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="banner"><span class="dot"></span> 🛰️ GPS kuzatuv FAOL</div>
+  <div class="status">
+    Hurmatli <strong><%= employee.name %></strong>, joylashuvingiz ish vaqtida
+    yig'ilmoqda. Bu sahifa ochiq turganda kuzatuv faol. Internet bo'lmasa
+    ma'lumot telefoningizda saqlanadi va aloqa tiklanganda yuboriladi.
+  </div>
+  <div class="meta">
+    Holat: <code id="state">ishga tushmoqda…</code><br>
+    Navbatda: <code id="queued">0</code> ta nuqta
+  </div>
+
+  <script src="/static/offline-queue.js"></script>
+  <script>
+    (function () {
+      var TOKEN = <%- JSON.stringify(token) %>;
+      var QUEUE_KEY = 'gps_queue_' + TOKEN;
+      var INTERVAL_MS = 30000;
+      var sending = false; // serialization guard: only one flush in flight
+
+      function readQueue() {
+        try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+        catch (e) { return []; }
+      }
+      function writeQueue(q) {
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) {}
+      }
+      function setState(s) {
+        var el = document.getElementById('state'); if (el) el.textContent = s;
+      }
+      function setQueued(n) {
+        var el = document.getElementById('queued'); if (el) el.textContent = String(n);
+      }
+
+      function flush() {
+        if (sending) return;                 // never overlap sends
+        var queue = readQueue();
+        setQueued(queue.length);
+        if (queue.length === 0) return;
+        sending = true;
+        fetch('./' + TOKEN + '/locations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ points: queue })
+        }).then(function (resp) {
+          if (resp.ok) {
+            // Remove exactly the points the server accepted, by identity, so
+            // readings appended during this send are preserved, not dropped.
+            var remaining = OfflineQueue.removeSent(readQueue(), queue);
+            writeQueue(remaining);
+            setQueued(remaining.length);
+            setState('yuborildi · ' + new Date().toLocaleTimeString());
+          } else {
+            setState('server xatosi (' + resp.status + '), qayta urinaman');
+          }
+        }).catch(function () {
+          setState('internet yo’q, navbatga saqlandi');
+        }).then(function () {
+          sending = false;
+        });
+      }
+
+      function tick() {
+        if (!navigator.geolocation) { setState('qurilma GPS ni qo’llamaydi'); return; }
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          writeQueue(OfflineQueue.enqueue(readQueue(), {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            recorded_at: new Date().toISOString()
+          }));
+          setQueued(readQueue().length);
+          flush();
+        }, function (err) {
+          setState('GPS xatosi: ' + err.message);
+        }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+      }
+
+      window.addEventListener('online', flush);
+      tick();
+      setInterval(tick, INTERVAL_MS);
+    })();
+  </script>
+</body>
+</html>

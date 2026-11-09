@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Boshqaruv paneli</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+    header { background: #1e293b; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+    header h1 { font-size: 1.1rem; margin: 0; }
+    nav a, header form button { color: #93c5fd; text-decoration: none; margin-left: 1rem; background: none; border: 0; cursor: pointer; font-size: .95rem; }
+    main { padding: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .9rem; }
+    th, td { text-align: left; padding: .6rem; border-bottom: 1px solid #334155; }
+    .badge { padding: .15rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+    .consented { background: #166534; color: #bbf7d0; }
+    .pending { background: #854d0e; color: #fde68a; }
+    .card { background: #1e293b; padding: 1.25rem; border-radius: 10px; max-width: 520px; }
+    label { display: block; margin: .6rem 0 .2rem; font-size: .82rem; }
+    input { width: 100%; padding: .5rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
+    .add-btn { margin-top: 1rem; padding: .6rem 1rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
+    a.zone { color: #93c5fd; }
+    input.link { width: 190px; padding: .3rem .4rem; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: #93c5fd; font-size: .78rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛰️ GPS Monitoring — Admin</h1>
+    <nav>
+      <a href="/admin">Xodimlar</a>
+      <a href="/admin/map">Xarita</a>
+      <a href="/admin/alerts">Signallar</a>
+      <a href="/admin/settings">Sozlamalar</a>
+      <form method="POST" action="/admin/logout" style="display:inline">
+        <button type="submit">Chiqish</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h2>Yangi xodim qo'shish</h2>
+    <form class="card" method="POST" action="/admin/employees">
+      <label for="name">Ism</label>
+      <input id="name" name="name" required>
+      <label for="phone">Telefon</label>
+      <input id="phone" name="phone" placeholder="+998..." required>
+      <label for="position">Lavozim</label>
+      <input id="position" name="position" placeholder="kuryer, haydovchi...">
+      <button class="add-btn" type="submit">Qo'shish va rozilik havolasini yuborish</button>
+    </form>
+
+    <h2 style="margin-top:2rem">Xodimlar</h2>
+    <table>
+      <thead>
+        <tr><th>Ism</th><th>Telefon</th><th>Lavozim</th><th>Rozilik</th><th>Havola</th><th>Oxirgi faollik</th><th>Zona</th></tr>
+      </thead>
+      <tbody>
+        <% employees.forEach(function (e) { %>
+          <tr>
+            <td><%= e.name %></td>
+            <td><%= e.phone %></td>
+            <td><%= e.position || '—' %></td>
+            <td>
+              <% if (e.consent_status === 'consented') { %>
+                <span class="badge consented">Rozi</span>
+              <% } else { %>
+                <span class="badge pending">Kutilmoqda</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (e.consent_token) { %>
+                <input class="link" type="text" readonly
+                       value="/consent/<%= e.consent_token %>"
+                       onclick="this.select()"
+                       title="Xodimga yuboriladigan rozilik havolasi">
+              <% } else { %>—<% } %>
+            </td>
+            <td><%= e.last_seen ? new Date(e.last_seen).toLocaleString() : '—' %></td>
+            <td><a class="zone" href="/admin/employees/<%= e.id %>/zone">Zona sozlash</a></td>
+          </tr>
+        <% }); %>
+        <% if (employees.length === 0) { %>
+          <tr><td colspan="7">Hali xodim qo'shilmagan.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Render.com Blueprint — GPS Monitoring saytini bepul ishga tushirish uchun.
+# Render'da "New +" -> "Blueprint" -> bu GitHub repo va
+# `claude/gps-monitoring-app-hgz8sq` branch'ini tanlang. Render shu faylni
+# o'qib, hamma narsani avtomatik sozlaydi.
+#
+# Eslatma: bepul rejada disk vaqtinchalik — sayt qayta ishga tushganda
+# baza (rozilik, joylashuvlar) tozalanadi. Doimiy saqlash uchun keyinchalik
+# Render'ning "Disk" (~$7/oy) yoki o'z VPS'ingizga o'ting.
+services:
+  - type: web
+    name: gps-monitoring
+    runtime: node
+    rootDir: gps-monitoring
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        generateValue: true # Render avtomatik parol yaratadi (Dashboard -> Environment da ko'rasiz/o'zgartirasiz)
+      - key: SESSION_SECRET
+        generateValue: true # Render avtomatik kuchli tasodifiy qiymat yaratadi
+      - key: DB_PATH
+        value: ./data/app.db
