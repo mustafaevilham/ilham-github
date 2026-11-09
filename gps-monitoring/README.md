@@ -54,12 +54,21 @@ qilgandan keyin navbatdan o'chiriladi.
 npm test
 ```
 
-## SMS provayderini ulash
+## SMS provayderini ulash (Eskiz.uz)
 
-Hozirgi bosqichda SMS yuborilmaydi — rozilik havolasi va matni **konsolga**
-chiqariladi (`[SMS -> +998... ] ...`). Haqiqiy provayder (masalan Eskiz.uz)
-ulash uchun **faqat bitta funksiyani** o'zgartirish kifoya:
-`src/sms.js` dagi `sendSms(phone, message)`.
+Eskiz.uz integratsiyasi kodga qo'shilgan. Quyidagi muhit o'zgaruvchilarini
+bersangiz, rozilik havolasi xodimga **haqiqiy SMS** orqali yuboriladi:
+
+```bash
+export ESKIZ_EMAIL="eskiz-hisobingiz@email.uz"
+export ESKIZ_PASSWORD="eskiz-paroli"
+export ESKIZ_FROM="4546"   # ixtiyoriy; tasdiqlangan sender nomi (standart test: 4546)
+```
+
+Bu o'zgaruvchilar berilmasa, tizim avtomatik **konsolga** yozadi
+(`[SMS -> +998...] ...`) — ya'ni development va test uchun hech narsa
+o'zgartirmasdan ishlayveradi. Eskiz yuborishda xato bo'lsa ham, matn
+konsolga tushib qoladi (ma'lumot yo'qolmaydi).
 
 ## Muhim: maxfiylik chegaralari
 

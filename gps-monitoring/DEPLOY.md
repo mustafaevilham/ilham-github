@@ -119,9 +119,21 @@ npm install --omit=dev
 sudo systemctl restart gps-monitoring
 ```
 
+## Haqiqiy SMS (Eskiz.uz)
+Eskiz integratsiyasi tayyor. systemd xizmat fayliga (4-qadam) quyidagilarni
+qo'shsangiz, rozilik havolasi xodimga avtomatik SMS orqali boradi:
+```ini
+Environment=ESKIZ_EMAIL=eskiz-hisobingiz@email.uz
+Environment=ESKIZ_PASSWORD=eskiz-paroli
+Environment=ESKIZ_FROM=4546
+```
+So'ng `sudo systemctl restart gps-monitoring`. Bu o'zgaruvchilar bo'lmasa,
+tizim havolani faqat loglarga yozadi (`journalctl -u gps-monitoring -f`).
+
+> Server `notify.eskiz.uz` ga chiqa olishi kerak (odatda ochiq). Sender nomi
+> (`ESKIZ_FROM`) Eskiz kabinetida tasdiqlangan bo'lishi shart; test uchun `4546`.
+
 ## Keyingi qadamlar (tavsiya)
-- **Haqiqiy SMS**: `src/sms.js` dagi `sendSms` ni Eskiz.uz API'siga ulang —
-  shunda rozilik havolasi xodimga avtomatik SMS orqali boradi.
 - **Zaxira nusxa**: `data/app.db` faylini muntazam zaxiralang (bu butun baza).
 - **Xavfsizlik yaxshilashlari**: session cookie'ga `secure: true`, `sameSite`,
   va admin formalariga CSRF himoyasi (hozir keyinga qoldirilgan).
