@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 const express = require('express');
-const { verifyPassword, requireAdminAuth } = require('../auth');
+const { verifyPassword, hashPassword, requireAdminAuth } = require('../auth');
 const { sendSms } = require('../sms');
+const {
+  getSetting, setSetting, getConsentTemplate, renderConsentMessage,
+} = require('../settings');
 
 function adminRoutes(db, options) {
   const router = express.Router();
@@ -13,9 +16,10 @@ function adminRoutes(db, options) {
 
   router.post('/login', (req, res) => {
     const { username, password } = req.body;
-    const ok =
-      username === options.adminUsername &&
-      verifyPassword(password || '', options.adminPasswordHash);
+    // Read current credentials from settings (so a changed password works).
+    const storedUser = getSetting(db, 'admin_username', options.adminUsername);
+    const storedHash = getSetting(db, 'admin_password_hash', options.adminPasswordHash);
+    const ok = username === storedUser && verifyPassword(password || '', storedHash);
     if (ok) {
       req.session.isAdmin = true;
       return res.redirect('/admin');
@@ -56,12 +60,56 @@ function adminRoutes(db, options) {
     ).run(employeeId, token, 'pending');
 
     const consentUrl = `${req.protocol}://${req.get('host')}/consent/${token}`;
-    const message =
-      `Hurmatli ${name}, siz ish vaqtida GPS orqali kuzatilasiz — ` +
-      `korrupsiya nazorati uchun. Rozilik berish uchun: ${consentUrl}`;
+    const message = renderConsentMessage(getConsentTemplate(db), {
+      name,
+      link: consentUrl,
+    });
     sendSms(phone, message);
 
     res.redirect('/admin');
+  });
+
+  // --- Settings: change password & edit consent message ---
+  router.get('/settings', (req, res) => {
+    res.render('admin-settings', {
+      template: getConsentTemplate(db),
+      message: req.query.msg || null,
+      error: req.query.err || null,
+    });
+  });
+
+  router.post('/settings/password', (req, res) => {
+    const { current_password, new_password } = req.body;
+    const storedHash = getSetting(db, 'admin_password_hash', options.adminPasswordHash);
+    if (!verifyPassword(current_password || '', storedHash)) {
+      return res.status(200).render('admin-settings', {
+        template: getConsentTemplate(db),
+        message: null,
+        error: 'Joriy parol noto’g’ri',
+      });
+    }
+    if (!new_password || new_password.length < 4) {
+      return res.status(200).render('admin-settings', {
+        template: getConsentTemplate(db),
+        message: null,
+        error: 'Yangi parol kamida 4 belgidan iborat bo’lsin',
+      });
+    }
+    setSetting(db, 'admin_password_hash', hashPassword(new_password));
+    res.redirect('/admin/settings?msg=' + encodeURIComponent('Parol o’zgartirildi'));
+  });
+
+  router.post('/settings/message', (req, res) => {
+    const { template } = req.body;
+    if (!template || !template.includes('{link}')) {
+      return res.status(200).render('admin-settings', {
+        template: template || getConsentTemplate(db),
+        message: null,
+        error: 'Matnda {link} bo’lishi shart (havola shu yerga qo’yiladi)',
+      });
+    }
+    setSetting(db, 'consent_message_template', template);
+    res.redirect('/admin/settings?msg=' + encodeURIComponent('Matn saqlandi'));
   });
 
   // --- Zone editing ---

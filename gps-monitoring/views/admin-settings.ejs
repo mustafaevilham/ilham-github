@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Sozlamalar</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+    header { background: #1e293b; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+    header h1 { font-size: 1.1rem; margin: 0; }
+    nav a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
+    main { padding: 1.5rem; max-width: 560px; }
+    .card { background: #1e293b; padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; }
+    h2 { font-size: 1rem; margin-top: 0; }
+    label { display: block; margin: .7rem 0 .25rem; font-size: .85rem; }
+    input, textarea { width: 100%; padding: .55rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; font-family: inherit; }
+    textarea { min-height: 90px; resize: vertical; }
+    button { margin-top: 1rem; padding: .6rem 1.1rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
+    .hint { font-size: .78rem; color: #94a3b8; margin-top: .35rem; }
+    .ok { background: #166534; color: #bbf7d0; padding: .6rem .8rem; border-radius: 6px; margin-bottom: 1rem; }
+    .err { background: #7f1d1d; color: #fecaca; padding: .6rem .8rem; border-radius: 6px; margin-bottom: 1rem; }
+    code { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚙️ Sozlamalar</h1>
+    <nav>
+      <a href="/admin">Xodimlar</a>
+      <a href="/admin/map">Xarita</a>
+      <a href="/admin/alerts">Signallar</a>
+      <a href="/admin/settings">Sozlamalar</a>
+    </nav>
+  </header>
+  <main>
+    <% if (message) { %><div class="ok"><%= message %></div><% } %>
+    <% if (error) { %><div class="err"><%= error %></div><% } %>
+
+    <div class="card">
+      <h2>Admin parolini o'zgartirish</h2>
+      <form method="POST" action="/admin/settings/password">
+        <label for="current_password">Joriy parol</label>
+        <input id="current_password" name="current_password" type="password" required>
+        <label for="new_password">Yangi parol</label>
+        <input id="new_password" name="new_password" type="password" required>
+        <button type="submit">Parolni o'zgartirish</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Xodimga boradigan matn</h2>
+      <form method="POST" action="/admin/settings/message">
+        <label for="template">Rozilik xabari (SMS / havola matni)</label>
+        <textarea id="template" name="template"><%= template %></textarea>
+        <div class="hint">
+          <code>{name}</code> — xodim ismi, <code>{link}</code> — rozilik havolasi
+          bilan avtomatik almashtiriladi. <code>{link}</code> albatta bo'lishi shart.
+        </div>
+        <button type="submit">Matnni saqlash</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

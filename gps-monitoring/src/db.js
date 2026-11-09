@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS alerts (
   resolved INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (employee_id) REFERENCES employees(id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `;
 
 function createDb(dbPath = './data/app.db') {

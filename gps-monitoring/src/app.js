@@ -3,8 +3,16 @@ const express = require('express');
 const session = require('express-session');
 const { employeeRoutes } = require('./routes/employeeRoutes');
 const { adminRoutes } = require('./routes/adminRoutes');
+const { ensureAdminSeed } = require('./settings');
 
 function createApp(db, options) {
+  // Seed the admin credentials into the DB settings on first boot so they can
+  // be changed at runtime. On later boots this never overwrites a changed one.
+  ensureAdminSeed(db, {
+    username: options.adminUsername,
+    passwordHash: options.adminPasswordHash,
+  });
+
   const app = express();
 
   app.set('view engine', 'ejs');
