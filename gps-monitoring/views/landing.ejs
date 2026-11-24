@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Rozilikka asoslangan xodim GPS kuzatuv tizimi">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}</script>
+  <title>GPS Monitoring</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #0f172a 70%); color: #e2e8f0; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center; }
+    .logo { width: 96px; height: 96px; }
+    h1 { font-size: 1.6rem; margin: 1rem 0 .25rem; }
+    p { color: #cbd5e1; font-size: .95rem; max-width: 420px; line-height: 1.5; }
+    a.btn { display: inline-block; margin-top: 1.5rem; padding: .85rem 1.75rem; border-radius: 10px; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; }
+    .foot { margin-top: 2rem; font-size: .78rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <img class="logo" src="/static/icons/icon-192.png" alt="GPS Monitoring">
+  <h1>GPS Monitoring</h1>
+  <p>Rozilikka asoslangan xodim GPS kuzatuv tizimi. Xodim faqat o'z roziligi bilan va kuzatuv faol ekanini ko'rib turgan holda kuzatiladi.</p>
+  <a class="btn" href="/admin/login">Admin kirish</a>
+  <div class="foot">Xodimlar o'zlariga yuborilgan shaxsiy havola orqali kiradilar.</div>
+</body>
+</html>

@@ -28,6 +28,12 @@ function createApp(db, options) {
     cookie: { httpOnly: true },
   }));
 
+  // Public landing page at the root — also the entry point PWA/APK packaging
+  // tools (PWABuilder) read the manifest from.
+  app.get('/', (req, res) => {
+    res.render('landing');
+  });
+
   app.get('/health', (req, res) => {
     res.status(200).json({ ok: true });
   });
