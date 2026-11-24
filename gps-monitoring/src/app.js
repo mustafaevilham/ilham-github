@@ -32,6 +32,14 @@ function createApp(db, options) {
     res.status(200).json({ ok: true });
   });
 
+  // Serve the service worker from the root so its scope covers the whole app
+  // (a SW under /static/ could only control /static/). Enables PWA install.
+  app.get('/sw.js', (req, res) => {
+    res.set('Content-Type', 'application/javascript');
+    res.set('Service-Worker-Allowed', '/');
+    res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
+  });
+
   app.use('/consent', employeeRoutes(db));
   app.use('/admin', adminRoutes(db, options));
 
