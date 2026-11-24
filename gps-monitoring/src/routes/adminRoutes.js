@@ -3,14 +3,36 @@ const express = require('express');
 const { verifyPassword, hashPassword, requireAdminAuth } = require('../auth');
 const { sendSms } = require('../sms');
 const {
-  getSetting, setSetting, getConsentTemplate, renderConsentMessage,
+  getSetting, setSetting, getConsentTemplate, renderConsentMessage, isAdminConfigured,
 } = require('../settings');
 
 function adminRoutes(db, options) {
   const router = express.Router();
 
+  // --- First-run setup (only when no admin password is configured yet) ---
+  router.get('/setup', (req, res) => {
+    if (isAdminConfigured(db)) return res.redirect('/admin/login');
+    res.render('admin-setup', { error: null });
+  });
+
+  router.post('/setup', (req, res) => {
+    if (isAdminConfigured(db)) return res.redirect('/admin/login'); // no takeover
+    const { username, password, confirm } = req.body;
+    if (!password || password.length < 4) {
+      return res.status(200).render('admin-setup', { error: 'Parol kamida 4 belgidan iborat bo’lsin' });
+    }
+    if (password !== confirm) {
+      return res.status(200).render('admin-setup', { error: 'Parollar mos kelmadi' });
+    }
+    setSetting(db, 'admin_username', (username || 'admin').trim() || 'admin');
+    setSetting(db, 'admin_password_hash', hashPassword(password));
+    req.session.isAdmin = true;
+    res.redirect('/admin');
+  });
+
   // --- Auth ---
   router.get('/login', (req, res) => {
+    if (!isAdminConfigured(db)) return res.redirect('/admin/setup');
     res.render('admin-login', { error: null });
   });
 

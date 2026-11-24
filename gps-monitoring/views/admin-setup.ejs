@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}</script>
+  <title>Dastlabki sozlash</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center; padding: 1rem; }
+    .card { background: #1e293b; padding: 2rem; border-radius: 12px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    h1 { font-size: 1.25rem; margin-top: 0; }
+    p { font-size: .85rem; color: #94a3b8; line-height: 1.5; }
+    label { display: block; margin: .75rem 0 .25rem; font-size: .85rem; }
+    input { width: 100%; padding: .6rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
+    button { width: 100%; margin-top: 1.25rem; padding: .75rem; border: 0; border-radius: 6px; background: #16a34a; color: #fff; font-weight: 700; cursor: pointer; }
+    .error { color: #f87171; font-size: .85rem; margin-top: .75rem; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/admin/setup">
+    <h1>🛰️ Dastlabki sozlash</h1>
+    <p>Bu birinchi ochилиш. Admin uchun login va parol o'zingiz belgilang — bularni eslab qoling, keyin shular bilan kirasiz.</p>
+    <label for="username">Login (foydalanuvchi nomi)</label>
+    <input id="username" name="username" value="admin" autocomplete="username">
+    <label for="password">Parol</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required>
+    <label for="confirm">Parolni takrorlang</label>
+    <input id="confirm" name="confirm" type="password" autocomplete="new-password" required>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <button type="submit">Saqlash va kirish</button>
+  </form>
+</body>
+</html>

@@ -1,25 +1,20 @@
 const { createDb } = require('./src/db');
 const { createApp } = require('./src/app');
-const { hashPassword } = require('./src/auth');
 const { sweepSignalLoss } = require('./src/anomalyRunner');
 
 const port = Number(process.env.PORT) || 3000;
 const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-const adminPassword = process.env.ADMIN_PASSWORD;
-const sessionSecret = process.env.SESSION_SECRET;
+const sessionSecret = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
 const dbPath = process.env.DB_PATH || './data/app.db';
 
-if (!adminPassword) {
-  throw new Error('ADMIN_PASSWORD environment variable is required');
-}
-if (!sessionSecret) {
-  throw new Error('SESSION_SECRET environment variable is required');
-}
-
+// No password is read from the environment: on first run the app shows a
+// setup screen where the operator chooses their own admin password. This is
+// deterministic (always first-run setup on a fresh database) and never puts a
+// password in the repo or relies on a hosting env var the operator can't read.
 const db = createDb(dbPath);
 const app = createApp(db, {
   adminUsername,
-  adminPasswordHash: hashPassword(adminPassword),
+  adminPasswordHash: undefined,
   sessionSecret,
 });
 

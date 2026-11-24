@@ -18,8 +18,8 @@ services:
     envVars:
       - key: ADMIN_USERNAME
         value: admin
-      - key: ADMIN_PASSWORD
-        generateValue: true # Render avtomatik parol yaratadi (Dashboard -> Environment da ko'rasiz/o'zgartirasiz)
+      # ADMIN_PASSWORD atayin yo'q: birinchi ochilishda parolni o'zingiz
+      # belgilaysiz (sozlash ekrani). Shunda parol repoda saqlanmaydi.
       - key: SESSION_SECRET
         generateValue: true # Render avtomatik kuchli tasodifiy qiymat yaratadi
       - key: DB_PATH

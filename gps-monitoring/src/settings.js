@@ -17,13 +17,20 @@ function setSetting(db, key, value) {
   `).run(key, value);
 }
 
-// Seed the admin credentials from env ONLY if none are stored yet. Never
-// overwrites an existing (possibly changed) password.
+// Seed the admin credentials ONLY if a passwordHash is provided AND none is
+// stored yet. With no passwordHash, nothing is seeded and the app stays
+// "unconfigured", which triggers the first-run setup screen. Never overwrites
+// an existing (possibly changed) password.
 function ensureAdminSeed(db, { username, passwordHash }) {
-  if (getSetting(db, 'admin_password_hash') === null) {
+  if (passwordHash && getSetting(db, 'admin_password_hash') === null) {
     setSetting(db, 'admin_username', username);
     setSetting(db, 'admin_password_hash', passwordHash);
   }
+}
+
+// True once an admin password has been set (via env seed or first-run setup).
+function isAdminConfigured(db) {
+  return getSetting(db, 'admin_password_hash') !== null;
 }
 
 function getConsentTemplate(db) {
@@ -40,6 +47,7 @@ module.exports = {
   getSetting,
   setSetting,
   ensureAdminSeed,
+  isAdminConfigured,
   getConsentTemplate,
   renderConsentMessage,
   DEFAULT_CONSENT_TEMPLATE,
