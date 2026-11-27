@@ -1,0 +1,13 @@
+{
+  "appId": "uz.ilham.gpsmonitor",
+  "appName": "GPS Monitor",
+  "webDir": "www",
+  "server": {
+    "url": "https://gps-monitoring.onrender.com",
+    "cleartext": false,
+    "allowNavigation": ["gps-monitoring.onrender.com"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
