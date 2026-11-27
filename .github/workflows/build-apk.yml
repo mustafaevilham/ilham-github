@@ -41,11 +41,12 @@ jobs:
       - name: Create the Android project
         run: npx cap add android
 
-      - name: Allow location (GPS) in the Android manifest
-        run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />|' "$MANIFEST"
-          grep -q ACCESS_FINE_LOCATION "$MANIFEST" || { echo "location permission was not added"; cat "$MANIFEST"; exit 1; }
+      # Splices in the native background-GPS plugin (foreground service +
+      # persistent notification): Java sources, manifest permissions +
+      # service declaration, MainActivity plugin registration, and the
+      # play-services-location Gradle dependency. See android-app/native-patch/.
+      - name: Apply the native background-GPS plugin
+        run: python3 native-patch/apply.py
 
       - name: Use the GPS app icon
         run: |
