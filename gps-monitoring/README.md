@@ -48,6 +48,23 @@ mavjud bo'lganda (har o'qishda va brauzerning `online` hodisasida) serverga
 partiya sifatida, vaqt tartibida yuboriladi. Ma'lumot faqat server qabul
 qilgandan keyin navbatdan o'chiriladi.
 
+## Doimiy baza (Turso) — Render bepul rejasi uchun
+
+Render bepul rejasida disk vaqtinchalik: sayt uxlab qolsa, mahalliy baza
+(parol, xodimlar, joylashuvlar) tozalanadi. Buni bepul **Turso** bazasi hal
+qiladi. Ikkita muhit o'zgaruvchisi berilsa, ilova ma'lumotni Turso'ga yozadi
+va qayta ishga tushganda undan o'qiydi:
+
+```bash
+export TURSO_DATABASE_URL="libsql://baza-nomi-akkaunt.turso.io"
+export TURSO_AUTH_TOKEN="..."   # maxfiy kalit — repoga yoki chatga yozmang
+```
+
+- Ikkalasi ham berilmasa — mahalliy fayl (rivojlantirish va testlar uchun).
+- Faqat bittasi berilsa — ilova ishga tushmaydi va nima yetishmasligini aytadi.
+- Server ishga tushganda logda `Database: Turso` yoki `Database: local file`
+  yozuvi chiqadi — qaysi rejimda ishlayotganini shu yerdan bilasiz.
+
 ## Testlar
 
 ```bash

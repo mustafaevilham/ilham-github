@@ -1,4 +1,4 @@
-const { createDb } = require('./src/db');
+const { createDb, remoteConfigFromEnv } = require('./src/db');
 const { createApp } = require('./src/app');
 const { sweepSignalLoss } = require('./src/anomalyRunner');
 
@@ -11,7 +11,13 @@ const dbPath = process.env.DB_PATH || './data/app.db';
 // setup screen where the operator chooses their own admin password. This is
 // deterministic (always first-run setup on a fresh database) and never puts a
 // password in the repo or relies on a hosting env var the operator can't read.
-const db = createDb(dbPath);
+const remote = remoteConfigFromEnv(process.env);
+const db = createDb(dbPath, remote);
+console.log(
+  remote
+    ? 'Database: Turso (data is kept across restarts)'
+    : 'Database: local file (data is LOST when a free host restarts; set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)'
+);
 const app = createApp(db, {
   adminUsername,
   adminPasswordHash: undefined,
