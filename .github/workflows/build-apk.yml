@@ -49,8 +49,6 @@ jobs:
 
       - name: Use the GPS app icon
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq imagemagick
           for f in $(find android/app/src/main/res -name 'ic_launcher*.png'); do
             s=$(identify -format %w "$f")
             convert ../gps-monitoring/public/icons/icon-512.png -resize "${s}x${s}" "$f"
