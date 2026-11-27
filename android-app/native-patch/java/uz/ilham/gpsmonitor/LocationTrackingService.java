@@ -98,7 +98,7 @@ public class LocationTrackingService extends Service {
             return START_NOT_STICKY;
         }
 
-        startForeground(NOTIF_ID, buildNotification("ishga tushdi"), foregroundServiceType());
+        startForeground(NOTIF_ID, buildNotification(t("ishga tushdi", "started")), foregroundServiceType());
         startLocationUpdates();
         registerConnectivityCallback();
         return START_STICKY; // Android restarts us with a null intent if killed; we reload the token.
@@ -125,6 +125,17 @@ public class LocationTrackingService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    // Simple bundled strings: Uzbek (default) + English, chosen by the
+    // device's own language setting (Settings > System > Languages).
+    private boolean isUzbek() {
+        String lang = Locale.getDefault().getLanguage();
+        return lang == null || lang.equalsIgnoreCase("uz");
+    }
+
+    private String t(String uz, String en) {
+        return isUzbek() ? uz : en;
     }
 
     private int foregroundServiceType() {
@@ -219,13 +230,13 @@ public class LocationTrackingService extends Service {
                 if (toSend.length() == 0) return;
                 boolean ok = postPoints(toSend);
                 if (ok) {
-                    mainHandler.post(() -> updateNotification("yuborildi"));
+                    mainHandler.post(() -> updateNotification(t("yuborildi", "sent")));
                     synchronized (LocationTrackingService.this) {
                         JSONArray remaining = subtractSent(readQueue(), toSend);
                         writeQueue(remaining);
                     }
                 } else {
-                    mainHandler.post(() -> updateNotification("internet kutilmoqda"));
+                    mainHandler.post(() -> updateNotification(t("internet kutilmoqda", "waiting for internet")));
                 }
             } finally {
                 sending.set(false);
@@ -334,7 +345,7 @@ public class LocationTrackingService extends Service {
     private Notification buildNotification(String status) {
         String time = DateFormat.format("HH:mm", new java.util.Date()).toString();
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("🛰️ GPS kuzatuv FAOL")
+                .setContentTitle(t("\uD83D\uDEF0\uFE0F GPS kuzatuv FAOL", "\uD83D\uDEF0\uFE0F GPS tracking ACTIVE"))
                 .setContentText(status + " · " + time)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setOngoing(true)
