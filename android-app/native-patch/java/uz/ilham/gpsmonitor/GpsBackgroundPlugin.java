@@ -42,7 +42,7 @@ public class GpsBackgroundPlugin extends Plugin {
             requestPermissionForAlias("location", call, "locationPermsCallback");
             return;
         }
-        startServiceWithToken(token);
+        startServiceWithToken(token, call.getString("title"));
         JSObject ret = new JSObject();
         ret.put("started", true);
         call.resolve(ret);
@@ -55,7 +55,7 @@ public class GpsBackgroundPlugin extends Plugin {
             return;
         }
         String token = call.getString("token");
-        startServiceWithToken(token);
+        startServiceWithToken(token, call.getString("title"));
         JSObject ret = new JSObject();
         ret.put("started", true);
         call.resolve(ret);
@@ -70,9 +70,12 @@ public class GpsBackgroundPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    private void startServiceWithToken(String token) {
+    private void startServiceWithToken(String token, String title) {
         Intent intent = new Intent(getContext(), LocationTrackingService.class);
         intent.putExtra("token", token);
+        if (title != null && !title.isEmpty()) {
+            intent.putExtra("title", title);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getContext().startForegroundService(intent);
         } else {

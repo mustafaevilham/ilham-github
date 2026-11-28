@@ -4,6 +4,7 @@ const { createDb } = require('../src/db');
 const {
   getSetting, setSetting, ensureAdminSeed,
   getConsentTemplate, renderConsentMessage, DEFAULT_CONSENT_TEMPLATE,
+  getTrackingTitle, DEFAULT_TRACKING_TITLE,
 } = require('../src/settings');
 
 test('getSetting returns the fallback when the key is absent, stored value when present', () => {
@@ -45,4 +46,11 @@ test('renderConsentMessage replaces {name} and {link} placeholders (all occurren
     name: 'Jasur', link: 'http://x/consent/abc',
   });
   assert.strictEqual(out, 'Jasur, Jasur! Havola: http://x/consent/abc');
+});
+
+test('getTrackingTitle returns the default when unset, the stored one when set', () => {
+  const db = createDb(':memory:');
+  assert.strictEqual(getTrackingTitle(db), DEFAULT_TRACKING_TITLE);
+  setSetting(db, 'tracking_title', 'Kuzatuv ishlamoqda');
+  assert.strictEqual(getTrackingTitle(db), 'Kuzatuv ishlamoqda');
 });

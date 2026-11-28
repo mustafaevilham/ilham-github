@@ -4,6 +4,7 @@ const { verifyPassword, hashPassword, requireAdminAuth } = require('../auth');
 const { sendSms } = require('../sms');
 const {
   getSetting, setSetting, getConsentTemplate, renderConsentMessage, isAdminConfigured,
+  getTrackingTitle,
 } = require('../settings');
 
 function adminRoutes(db, options) {
@@ -95,6 +96,7 @@ function adminRoutes(db, options) {
   router.get('/settings', (req, res) => {
     res.render('admin-settings', {
       template: getConsentTemplate(db),
+      trackingTitle: getTrackingTitle(db),
       message: req.query.msg || null,
       error: req.query.err || null,
     });
@@ -106,6 +108,7 @@ function adminRoutes(db, options) {
     if (!verifyPassword(current_password || '', storedHash)) {
       return res.status(200).render('admin-settings', {
         template: getConsentTemplate(db),
+        trackingTitle: getTrackingTitle(db),
         message: null,
         error: 'Joriy parol noto’g’ri',
       });
@@ -113,6 +116,7 @@ function adminRoutes(db, options) {
     if (!new_password || new_password.length < 4) {
       return res.status(200).render('admin-settings', {
         template: getConsentTemplate(db),
+        trackingTitle: getTrackingTitle(db),
         message: null,
         error: 'Yangi parol kamida 4 belgidan iborat bo’lsin',
       });
@@ -126,12 +130,27 @@ function adminRoutes(db, options) {
     if (!template || !template.includes('{link}')) {
       return res.status(200).render('admin-settings', {
         template: template || getConsentTemplate(db),
+        trackingTitle: getTrackingTitle(db),
         message: null,
         error: 'Matnda {link} bo’lishi shart (havola shu yerga qo’yiladi)',
       });
     }
     setSetting(db, 'consent_message_template', template);
     res.redirect('/admin/settings?msg=' + encodeURIComponent('Matn saqlandi'));
+  });
+
+  router.post('/settings/tracking-title', (req, res) => {
+    const title = (req.body.title || '').trim();
+    if (!title) {
+      return res.status(200).render('admin-settings', {
+        template: getConsentTemplate(db),
+        trackingTitle: getTrackingTitle(db),
+        message: null,
+        error: 'Matn bo’sh bo’lmasligi kerak',
+      });
+    }
+    setSetting(db, 'tracking_title', title);
+    res.redirect('/admin/settings?msg=' + encodeURIComponent('Bildirishnoma matni saqlandi'));
   });
 
   // --- Zone editing ---

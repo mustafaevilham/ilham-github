@@ -85,3 +85,24 @@ test('editing the consent message template persists and is used for new employee
   }
   assert.ok(lines.some(l => l.includes('Assalomu alaykum Nodir!')));
 });
+
+test('editing the tracking banner title persists and the settings page shows it', async () => {
+  const { app, db } = buildApp();
+  const agent = await login(app);
+
+  const res = await agent.post('/admin/settings/tracking-title').send({ title: 'Kuzatuv FAOL (maxsus)' });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(getSetting(db, 'tracking_title', null), 'Kuzatuv FAOL (maxsus)');
+
+  const page = await agent.get('/admin/settings');
+  assert.match(page.text, /Kuzatuv FAOL \(maxsus\)/);
+});
+
+test('editing the tracking banner title to empty is rejected', async () => {
+  const { app, db } = buildApp();
+  const agent = await login(app);
+
+  const res = await agent.post('/admin/settings/tracking-title').send({ title: '   ' });
+  assert.notStrictEqual(res.status, 302);
+  assert.strictEqual(getSetting(db, 'tracking_title', null), null);
+});

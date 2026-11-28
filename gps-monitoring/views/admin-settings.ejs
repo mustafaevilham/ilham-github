@@ -63,6 +63,19 @@
         <button type="submit">Matnni saqlash</button>
       </form>
     </div>
+
+    <div class="card">
+      <h2>Kuzatuv banneri / bildirishnoma matni</h2>
+      <form method="POST" action="/admin/settings/tracking-title">
+        <label for="tracking_title">Xodim ekranida va ilova bildirishnomasida ko'rinadigan matn</label>
+        <input id="tracking_title" name="title" value="<%= trackingTitle %>" required>
+        <div class="hint">
+          Kuzatuv faol bo'lganda xodimga shu matn ko'rsatiladi — veb-sahifadagi
+          bannerda ham, native ilovaning doimiy bildirishnomasida ham.
+        </div>
+        <button type="submit">Matnni saqlash</button>
+      </form>
+    </div>
   </main>
 </body>
 </html>

@@ -73,6 +73,7 @@ public class LocationTrackingService extends Service {
     private ConnectivityManager.NetworkCallback networkCallback;
     private final AtomicBoolean sending = new AtomicBoolean(false);
     private String token;
+    private String title; // admin-editable banner/notification text (Sozlamalar page)
 
     @Override
     public void onCreate() {
@@ -89,8 +90,15 @@ public class LocationTrackingService extends Service {
             token = intent.getStringExtra("token");
             saveToken(token);
         }
+        if (intent != null && intent.hasExtra("title")) {
+            title = intent.getStringExtra("title");
+            saveTitle(title);
+        }
         if (token == null) {
             token = loadToken();
+        }
+        if (title == null) {
+            title = loadTitle();
         }
         if (token == null) {
             Log.w(TAG, "No token available, stopping service");
@@ -298,6 +306,16 @@ public class LocationTrackingService extends Service {
                 .getString("token", null);
     }
 
+    private void saveTitle(String customTitle) {
+        getSharedPreferences("gps_background", Context.MODE_PRIVATE)
+                .edit().putString("title", customTitle).apply();
+    }
+
+    private String loadTitle() {
+        return getSharedPreferences("gps_background", Context.MODE_PRIVATE)
+                .getString("title", null);
+    }
+
     // --- Reconnect handling: flush as soon as connectivity returns ---
 
     private void registerConnectivityCallback() {
@@ -344,8 +362,15 @@ public class LocationTrackingService extends Service {
 
     private Notification buildNotification(String status) {
         String time = DateFormat.format("HH:mm", new java.util.Date()).toString();
+        // The admin can edit this text from the Sozlamalar page; it arrives
+        // via GpsBackground.start({title}) and is persisted so a restarted
+        // service still shows the right text. Falls back to the bilingual
+        // default only if the web page never sent one (e.g. an old cached page).
+        String displayTitle = (title != null && !title.isEmpty())
+                ? title
+                : t("\uD83D\uDEF0\uFE0F GPS kuzatuv FAOL", "\uD83D\uDEF0\uFE0F GPS tracking ACTIVE");
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle(t("\uD83D\uDEF0\uFE0F GPS kuzatuv FAOL", "\uD83D\uDEF0\uFE0F GPS tracking ACTIVE"))
+                .setContentTitle(displayTitle)
                 .setContentText(status + " · " + time)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setOngoing(true)

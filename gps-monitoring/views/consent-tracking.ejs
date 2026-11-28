@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-  <div class="banner"><span class="dot"></span> 🛰️ GPS kuzatuv FAOL</div>
+  <div class="banner"><span class="dot"></span> <%= trackingTitle %></div>
   <div class="status">
     Hurmatli <strong><%= employee.name %></strong>, joylashuvingiz ish vaqtida
     yig'ilmoqda. Bu sahifa ochiq turganda kuzatuv faol. Internet bo'lmasa
@@ -34,6 +34,7 @@
   <script>
     (function () {
       var TOKEN = <%- JSON.stringify(token) %>;
+      var TRACKING_TITLE = <%- JSON.stringify(trackingTitle) %>;
       var QUEUE_KEY = 'gps_queue_' + TOKEN;
       var INTERVAL_MS = 30000;
       var sending = false; // serialization guard: only one flush in flight
@@ -108,7 +109,7 @@
 
       if (isNativeApp() && window.Capacitor.Plugins && window.Capacitor.Plugins.GpsBackground) {
         setState('ilova: fon rejimida kuzatuv ishga tushirilmoqda…');
-        window.Capacitor.Plugins.GpsBackground.start({ token: TOKEN }).then(function () {
+        window.Capacitor.Plugins.GpsBackground.start({ token: TOKEN, title: TRACKING_TITLE }).then(function () {
           setState('ilova: fon rejimida kuzatuv FAOL (bildirishnomaga qarang)');
         }).catch(function (err) {
           setState('fon kuzatuvini ishga tushirib bo’lmadi: ' + (err && err.message));

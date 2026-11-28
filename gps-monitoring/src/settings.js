@@ -43,6 +43,15 @@ function renderConsentMessage(template, { name, link }) {
     .split('{link}').join(link);
 }
 
+// The persistent banner/notification text shown while tracking is active —
+// on the web page ("GPS kuzatuv FAOL") and, when running inside the native
+// app, as the Android foreground-service notification title too.
+const DEFAULT_TRACKING_TITLE = "🛰️ GPS kuzatuv FAOL";
+
+function getTrackingTitle(db) {
+  return getSetting(db, 'tracking_title', DEFAULT_TRACKING_TITLE);
+}
+
 module.exports = {
   getSetting,
   setSetting,
@@ -51,4 +60,6 @@ module.exports = {
   getConsentTemplate,
   renderConsentMessage,
   DEFAULT_CONSENT_TEMPLATE,
+  getTrackingTitle,
+  DEFAULT_TRACKING_TITLE,
 };

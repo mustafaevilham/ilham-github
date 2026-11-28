@@ -1,5 +1,6 @@
 const express = require('express');
 const { runAnomalyChecks } = require('../anomalyRunner');
+const { getTrackingTitle } = require('../settings');
 
 function employeeRoutes(db) {
   const router = express.Router();
@@ -14,7 +15,11 @@ function employeeRoutes(db) {
 
     const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(consent.employee_id);
     if (consent.status === 'consented') {
-      return res.render('consent-tracking', { token: req.params.token, employee });
+      return res.render('consent-tracking', {
+        token: req.params.token,
+        employee,
+        trackingTitle: getTrackingTitle(db),
+      });
     }
     return res.render('consent-pending', { token: req.params.token, employee });
   });
