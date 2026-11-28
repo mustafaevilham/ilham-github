@@ -31,6 +31,24 @@ test('GET /admin/map renders without error for an employee with a location', asy
   assert.match(res.text, /Jasur/);
 });
 
+test('the map page loads Leaflet from this server, not an external CDN', async () => {
+  const { agent } = await buildLoggedInApp();
+  const res = await agent.get('/admin/map');
+  assert.match(res.text, /\/static\/vendor\/leaflet\/leaflet\.css/);
+  assert.match(res.text, /\/static\/vendor\/leaflet\/leaflet\.js/);
+  assert.doesNotMatch(res.text, /unpkg\.com/);
+});
+
+test('the self-hosted Leaflet assets are actually served', async () => {
+  const { agent } = await buildLoggedInApp();
+  const css = await agent.get('/static/vendor/leaflet/leaflet.css');
+  assert.strictEqual(css.status, 200);
+  const js = await agent.get('/static/vendor/leaflet/leaflet.js');
+  assert.strictEqual(js.status, 200);
+  const icon = await agent.get('/static/vendor/leaflet/images/marker-icon.png');
+  assert.strictEqual(icon.status, 200);
+});
+
 test('GET /admin/alerts lists alerts, and resolve marks them resolved', async () => {
   const { agent, db } = await buildLoggedInApp();
   const now = new Date().toISOString();
