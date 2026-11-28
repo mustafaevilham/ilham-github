@@ -1,0 +1,95 @@
+name: Build Android APK
+
+# GPS Monitoring saytini Android ilovasiga (APK) o'raydi va tayyor faylni
+# GitHub "Releases" bo'limiga joylaydi. Telefondan to'g'ridan-to'g'ri yuklab
+# olib o'rnatsa bo'ladi:
+#   https://github.com/mustafaevilham/ilham-github/releases/tag/apk-latest
+
+on:
+  push:
+    branches: [claude/gps-monitoring-app-hgz8sq]
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/build-apk.yml'
+      - 'gps-monitoring/public/icons/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Capacitor
+        run: npm install
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      # Splices in the native background-GPS plugin (foreground service +
+      # persistent notification): Java sources, manifest permissions +
+      # service declaration, MainActivity plugin registration, and the
+      # play-services-location Gradle dependency. See android-app/native-patch/.
+      - name: Apply the native background-GPS plugin
+        run: python3 native-patch/apply.py
+
+      - name: Use the GPS app icon
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick
+          for f in $(find android/app/src/main/res -name 'ic_launcher*.png'); do
+            s=$(identify -format %w "$f")
+            convert ../gps-monitoring/public/icons/icon-512.png -resize "${s}x${s}" "$f"
+          done
+          BG=android/app/src/main/res/values/ic_launcher_background.xml
+          if [ -f "$BG" ]; then sed -i 's|#FFFFFF|#0f172a|' "$BG"; fi
+
+      - name: Build the APK
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Collect the APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk GPS-Monitor.apk
+          ls -l GPS-Monitor.apk
+
+      # Works with read-only workflow permissions: the APK is attached to this
+      # run (Actions > this run > Artifacts > GPS-Monitor-APK).
+      - name: Save the APK as a run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPS-Monitor-APK
+          path: android-app/GPS-Monitor.apk
+          if-no-files-found: error
+
+      # Needs "Read and write permissions" for workflows (repo Settings >
+      # Actions > General). If that is off this step fails with HTTP 403; the
+      # artifact above is still available, so do not fail the whole run.
+      - name: Publish the APK to GitHub Releases
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest GPS-Monitor.apk \
+            --title "GPS Monitor (Android APK)" \
+            --notes "Android telefon uchun tayyor ilova. GPS-Monitor.apk ni yuklab oling va o'rnating." \
+            --target "$GITHUB_SHA"
+          echo "Yuklab olish: https://github.com/${GITHUB_REPOSITORY}/releases/download/apk-latest/GPS-Monitor.apk"

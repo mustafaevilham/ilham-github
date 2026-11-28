@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}</script>
+  <title>Xabar</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 1rem; }
+    .panel { width: 100%; max-width: 420px; }
+    textarea { width: 100%; min-height: 140px; padding: .8rem; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 1rem; font-family: inherit; box-sizing: border-box; resize: vertical; }
+    button { width: 100%; margin-top: .9rem; padding: .85rem; border: 0; border-radius: 10px; background: #2563eb; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .6; }
+    .status { margin-top: 1rem; text-align: center; font-size: .9rem; color: #94a3b8; min-height: 1.2em; }
+    .status.ok { color: #4ade80; }
+    .status.err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <textarea id="msg" placeholder="Xabaringizni yozing…" autofocus></textarea>
+    <button id="send">Yuborish</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    (function () {
+      var TOKEN = <%- JSON.stringify(token) %>;
+      var textarea = document.getElementById('msg');
+      var button = document.getElementById('send');
+      var status = document.getElementById('status');
+
+      button.addEventListener('click', function () {
+        var message = textarea.value.trim();
+        if (!message) return;
+        button.disabled = true;
+        status.textContent = '';
+        status.className = 'status';
+        fetch('./' + TOKEN + '/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message })
+        }).then(function (res) {
+          button.disabled = false;
+          if (res.ok) {
+            textarea.value = '';
+            status.textContent = '✓ Yuborildi';
+            status.className = 'status ok';
+          } else {
+            status.textContent = 'Xato yuz berdi, qayta urining';
+            status.className = 'status err';
+          }
+        }).catch(function () {
+          button.disabled = false;
+          status.textContent = 'Internet yo’q, qayta urining';
+          status.className = 'status err';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
