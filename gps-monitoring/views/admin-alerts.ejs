@@ -21,6 +21,7 @@
     .outside_hours { color: #fbbf24; }
     .long_stop { color: #a78bfa; }
     .signal_loss { color: #60a5fa; }
+    .employee_message { color: #4ade80; }
     .resolved { opacity: .5; }
     button { padding: .35rem .7rem; border: 0; border-radius: 6px; background: #16a34a; color: #fff; cursor: pointer; font-size: .8rem; }
     .done { color: #4ade80; font-size: .8rem; }
@@ -46,7 +47,7 @@
           <tr class="<%= a.resolved ? 'resolved' : '' %>">
             <td><%= new Date(a.created_at).toLocaleString() %></td>
             <td><%= a.employee_name %></td>
-            <td class="type <%= a.type %>"><%= a.type %></td>
+            <td class="type <%= a.type %>"><%= a.type === 'employee_message' ? '💬 Xabar' : a.type %></td>
             <td><%= a.details || '' %></td>
             <td>
               <% if (a.resolved) { %>

@@ -70,6 +70,32 @@ function employeeRoutes(db) {
     return res.status(204).end();
   });
 
+  // A blank message panel the employee reaches by tapping the tracking
+  // notification: just a textarea and a send button, nothing else (no
+  // banner, no map, no admin UI). Submitted messages land in the admin's
+  // Signallar list as an 'employee_message' alert.
+  router.get('/:token/message', (req, res) => {
+    const consent = findConsent(req.params.token);
+    if (!consent) return res.status(404).send('Topilmadi');
+    if (consent.status !== 'consented') return res.status(403).send('Rozilik berilmagan');
+    return res.render('employee-message', { token: req.params.token });
+  });
+
+  router.post('/:token/message', (req, res) => {
+    const consent = findConsent(req.params.token);
+    if (!consent) return res.status(404).send('Topilmadi');
+    if (consent.status !== 'consented') return res.status(403).send('Rozilik berilmagan');
+
+    const message = (req.body && req.body.message || '').trim();
+    if (!message) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    db.prepare(
+      'INSERT INTO alerts (employee_id, type, details, created_at, resolved) VALUES (?, ?, ?, ?, 0)'
+    ).run(consent.employee_id, 'employee_message', message, new Date().toISOString());
+    return res.status(204).end();
+  });
+
   return router;
 }
 

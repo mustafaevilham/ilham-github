@@ -7,7 +7,6 @@ git-ignored), so this script is how the hand-written Java sources,
 manifest permissions, the service declaration, the Gradle dependency, and
 the plugin registration all get applied to that fresh project every time.
 """
-import re
 import shutil
 import sys
 from pathlib import Path
@@ -69,53 +68,17 @@ def patch_manifest():
     print(f"patched {path}")
 
 
-def patch_main_activity():
+def remove_generated_main_activity_if_other_extension():
+    # Capacitor's template is MainActivity.java, matching our own replacement
+    # under native-patch/java/ (copied over it by copy_java_sources). If a
+    # future Capacitor version ever generates a different extension (e.g.
+    # .kt), having both would be a duplicate-class build error — fail loudly
+    # instead of silently shipping a broken MainActivity.
     java_dir = ANDROID / "app" / "src" / "main" / "java" / "uz" / "ilham" / "gpsmonitor"
-    candidates = list(java_dir.glob("MainActivity.*"))
-    if not candidates:
-        fail(f"MainActivity not found under {java_dir}")
-    path = candidates[0]
-    text = path.read_text()
-
-    if "GpsBackgroundPlugin" in text:
-        print("MainActivity already patched, skipping")
-        return
-
-    if path.suffix == ".java":
-        if "public class MainActivity extends BridgeActivity {}" in text:
-            text = text.replace(
-                "public class MainActivity extends BridgeActivity {}",
-                (
-                    "public class MainActivity extends BridgeActivity {\n"
-                    "    @Override\n"
-                    "    public void onCreate(android.os.Bundle savedInstanceState) {\n"
-                    "        registerPlugin(GpsBackgroundPlugin.class);\n"
-                    "        super.onCreate(savedInstanceState);\n"
-                    "    }\n"
-                    "}\n"
-                ),
-            )
-        elif re.search(r"public class MainActivity extends BridgeActivity \{", text):
-            text = re.sub(
-                r"(public class MainActivity extends BridgeActivity \{\n)",
-                (
-                    r"\1"
-                    "    @Override\n"
-                    "    public void onCreate(android.os.Bundle savedInstanceState) {\n"
-                    "        registerPlugin(GpsBackgroundPlugin.class);\n"
-                    "        super.onCreate(savedInstanceState);\n"
-                    "    }\n\n"
-                ),
-                text,
-                count=1,
-            )
-        else:
-            fail(f"unrecognized MainActivity.java shape, cannot patch:\n{text}")
-    else:
-        fail(f"MainActivity has unexpected extension: {path.name}")
-
-    path.write_text(text)
-    print(f"patched {path}")
+    others = [p for p in java_dir.glob("MainActivity.*") if p.suffix != ".java"]
+    if others:
+        fail(f"unexpected non-.java MainActivity generated: {others} — "
+             f"update native-patch/java/.../MainActivity.java to match")
 
 
 def patch_app_build_gradle():
@@ -138,9 +101,9 @@ def patch_app_build_gradle():
 def main():
     if not ANDROID.exists():
         fail(f"{ANDROID} not found — run this from android-app/ after `npx cap add android`")
+    remove_generated_main_activity_if_other_extension()
     copy_java_sources()
     patch_manifest()
-    patch_main_activity()
     patch_app_build_gradle()
     print("apply.py: done")
 

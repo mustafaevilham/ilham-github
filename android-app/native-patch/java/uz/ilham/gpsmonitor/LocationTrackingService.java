@@ -376,7 +376,20 @@ public class LocationTrackingService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setContentIntent(buildMessagePanelIntent())
                 .build();
+    }
+
+    // Tapping the notification opens ONLY a blank message panel (textarea +
+    // send button) — nothing else: no map, no other employees, no admin data.
+    // The employee's message lands in the admin's Signallar list.
+    private PendingIntent buildMessagePanelIntent() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("target_path", "/consent/" + token + "/message");
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT
+                | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+        return PendingIntent.getActivity(this, 0, intent, flags);
     }
 
     private void updateNotification(String status) {
