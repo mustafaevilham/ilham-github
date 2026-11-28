@@ -95,9 +95,29 @@
         }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
       }
 
-      window.addEventListener('online', flush);
-      tick();
-      setInterval(tick, INTERVAL_MS);
+      // Inside the native Android app, hand tracking over to the native
+      // foreground service (GpsBackgroundPlugin): it keeps reporting location
+      // even when this page is backgrounded or the screen is off, while
+      // showing its own persistent "GPS kuzatuv FAOL" notification — so
+      // tracking stays visible to the employee without needing this page
+      // open. Outside the app (a plain mobile browser), fall back to the
+      // page-must-stay-open polling above, which is all a browser allows.
+      function isNativeApp() {
+        return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      }
+
+      if (isNativeApp() && window.Capacitor.Plugins && window.Capacitor.Plugins.GpsBackground) {
+        setState('ilova: fon rejimida kuzatuv ishga tushirilmoqda…');
+        window.Capacitor.Plugins.GpsBackground.start({ token: TOKEN }).then(function () {
+          setState('ilova: fon rejimida kuzatuv FAOL (bildirishnomaga qarang)');
+        }).catch(function (err) {
+          setState('fon kuzatuvini ishga tushirib bo’lmadi: ' + (err && err.message));
+        });
+      } else {
+        window.addEventListener('online', flush);
+        tick();
+        setInterval(tick, INTERVAL_MS);
+      }
     })();
   </script>
 </body>
